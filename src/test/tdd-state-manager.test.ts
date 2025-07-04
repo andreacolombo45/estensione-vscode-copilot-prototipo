@@ -96,4 +96,16 @@ suite('TddStateManager Test Suite', () => {
         const state = stateManager.state;
         assert.deepStrictEqual(state.refactoringSuggestions, suggestions);
     });
+
+    test("Should manage test results correctly", () => {
+        stateManager.setTestResults(true, 'All tests passed');
+        let state = stateManager.state;
+        assert.strictEqual(state.testResults?.success, true);
+        assert.strictEqual(state.testResults?.message, 'All tests passed');
+
+        stateManager.setTestResults(false, 'Some tests failed');
+        state = stateManager.state;
+        assert.strictEqual(state.testResults?.success, false);
+        assert.strictEqual(state.testResults?.message, 'Some tests failed');
+    });
 });
