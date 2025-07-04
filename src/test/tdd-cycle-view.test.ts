@@ -91,4 +91,18 @@ suite('TddCycleView Test Suite', () => {
         
         assert.ok(setPhasespy.calledWith(TddPhase.RED));
     });
+
+    test('Should handle resetCycle message correctly', async () => {
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+        
+        const resetSpy = sinon.spy(stateManager, 'reset');
+        
+        tddCycleView.resolveWebviewView(mockWebviewView, context, token);
+        
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'resetCycle' });
+        
+        assert.ok(resetSpy.called);
+    });
 });
