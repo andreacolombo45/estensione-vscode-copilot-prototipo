@@ -30,4 +30,15 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.selectedTest, undefined);
         assert.strictEqual(state.testResults, undefined);
     });
+
+    test("Should set phase and update mode correctly", () => {
+        stateManager.setPhase(TddPhase.RED);
+        let state = stateManager.state;
+        assert.strictEqual(state.currentPhase, TddPhase.RED);
+        assert.strictEqual(state.currentMode, AiMode.MENTOR);
+
+        stateManager.setPhase(TddPhase.GREEN);
+        assert.strictEqual(stateManager.state.currentPhase, TddPhase.GREEN);
+        assert.strictEqual(stateManager.state.currentMode, AiMode.ASK);
+    });
 });
