@@ -87,4 +87,13 @@ suite('AiService Test Suite', () => {
             assert.strictEqual(typeof suggestion.description, 'string');
         }); 
     });
+
+    test("Should verify tests and return results", async () => {
+        const testResults = await aiService.verifyTests();
+
+        assert.ok(testResults);
+        assert.strictEqual(typeof testResults.success, 'boolean');
+        assert.strictEqual(typeof testResults.message, 'string');
+        assert.ok(testResults.message.length > 0);
+    });
 });
