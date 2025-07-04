@@ -5,6 +5,7 @@ import { TddInteractionView } from '../views/tdd-interaction-view';
 import { AiService } from '../services/ai-service';
 import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase } from '../models/tdd-models';
+import { CodeAnalysisService } from '../services/code-analysis-service';
 
 suite('TddInteractionView Test Suite', () => {
     let tddInteractionView: TddInteractionView;
@@ -13,13 +14,16 @@ suite('TddInteractionView Test Suite', () => {
     let mockWebview: vscode.Webview;
     let stateManager: TddStateManager;
     let aiService: AiService;
+    let codeAnalysisService: CodeAnalysisService
 
     setup(() => {
         (TddStateManager as any).instance = undefined;
         (AiService as any).instance = undefined;
+        (CodeAnalysisService as any).instance = undefined;
 
         stateManager = TddStateManager.getInstance();
         aiService = AiService.getInstance();
+        codeAnalysisService = CodeAnalysisService.getInstance();
 
         mockWebview = {
             html: '',
@@ -96,5 +100,27 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setPhaseSpy.calledWith(TddPhase.RED));
         assert.ok(setTestProposalsSpy.calledWith(mockTestProposals));
         assert.ok(generateTestProposalsStub.calledWith(mockUserStory));
+    });
+
+    test("Should handle selectTestProposal message and insert test in file", async () => {
+        const selectTestProposalSpy = sinon.spy(stateManager, 'selectTestProposal');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const insertTestCodeStub = sinon.stub(codeAnalysisService, 'insertTestCode').resolves(true);
+
+        const testProposal = { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' };
+
+        stateManager.setTestProposals([testProposal]);
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'selectTestProposal', testId: 'test1' });
+
+        assert.ok(selectTestProposalSpy.calledWith('test1'));
+        assert.ok(setPhaseSpy.calledWith(TddPhase.GREEN));
+        assert.ok(insertTestCodeStub.called);
     });
 });
