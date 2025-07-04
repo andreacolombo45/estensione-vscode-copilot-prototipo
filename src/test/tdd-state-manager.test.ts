@@ -63,4 +63,24 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.selectedUserStory?.id, '1');
         assert.strictEqual(state.selectedUserStory?.title, 'Story 1');
     });
+
+    test("Should manage test proposals correctly", () => {
+        const testProposals = [
+            { id: '1', title: 'Test 1', description: 'Description 1', code: 'code1' },
+            { id: '2', title: 'Test 2', description: 'Description 2', code: 'code2' }
+        ];
+        stateManager.setTestProposals(testProposals);
+        let state = stateManager.state;
+        assert.deepStrictEqual(state.testProposals, testProposals);
+
+        stateManager.selectTestProposal('1');
+        state = stateManager.state;
+        assert.strictEqual(state.selectedTest?.id, '1');
+        assert.strictEqual(state.selectedTest?.title, 'Test 1');
+
+        stateManager.selectTestProposal('3');
+        state = stateManager.state;
+        assert.strictEqual(state.selectedTest?.id, '1');
+        assert.strictEqual(state.selectedTest?.title, 'Test 1');
+    });
 });
