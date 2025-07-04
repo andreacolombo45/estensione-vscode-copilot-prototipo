@@ -127,4 +127,14 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.selectedTest, undefined);
         assert.strictEqual(state.testResults, undefined);
     }); 
+
+    test("Should notify listeners on state change", (done) => {
+        stateManager.onStateChanged(() => {
+            const state = stateManager.state;
+            assert.strictEqual(state.currentPhase, TddPhase.RED);
+            done();
+        });
+
+        stateManager.setPhase(TddPhase.RED);
+    });
 });
