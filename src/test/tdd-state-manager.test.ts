@@ -6,6 +6,7 @@ suite('TddStateManager Test Suite', () => {
     let stateManager: TddStateManager;
 
     setup(() => {
+        (TddStateManager as any).instance = undefined;
         stateManager = TddStateManager.getInstance();
     });
 
@@ -38,8 +39,9 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.currentMode, AiMode.MENTOR);
 
         stateManager.setPhase(TddPhase.GREEN);
-        assert.strictEqual(stateManager.state.currentPhase, TddPhase.GREEN);
-        assert.strictEqual(stateManager.state.currentMode, AiMode.ASK);
+        state = stateManager.state;
+        assert.strictEqual(state.currentPhase, TddPhase.GREEN);
+        assert.strictEqual(state.currentMode, AiMode.ASK);
     });
 
     test("Should manage user stories correctly", () => {
@@ -48,14 +50,17 @@ suite('TddStateManager Test Suite', () => {
             { id: '2', title: 'Story 2', description: 'Description 2' }
         ];
         stateManager.setUserStories(stories);
-        assert.deepStrictEqual(stateManager.state.userStories, stories);
+        let state = stateManager.state;
+        assert.deepStrictEqual(state.userStories, stories);
 
         stateManager.selectUserStory('1');
-        assert.strictEqual(stateManager.state.selectedUserStory?.id, '1');
-        assert.strictEqual(stateManager.state.selectedUserStory?.title, 'Story 1');
+        state = stateManager.state;
+        assert.strictEqual(state.selectedUserStory?.id, '1');
+        assert.strictEqual(state.selectedUserStory?.title, 'Story 1');
 
-        stateManager.selectUserStory('3'); 
-        assert.strictEqual(stateManager.state.selectedUserStory?.id, '1');
-        assert.strictEqual(stateManager.state.selectedUserStory?.title, 'Story 1');
+        stateManager.selectUserStory('3');
+        state = stateManager.state;
+        assert.strictEqual(state.selectedUserStory?.id, '1');
+        assert.strictEqual(state.selectedUserStory?.title, 'Story 1');
     });
 });
