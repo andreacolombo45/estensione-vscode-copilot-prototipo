@@ -60,7 +60,7 @@ suite('TddCycleView Test Suite', () => {
         assert.ok(mockWebview.html.length > 0);
     });
 
-    test("Should generete correct HTML content for different phases", () => {
+    test("Should generate correct HTML content for different phases", () => {
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
 
@@ -76,5 +76,19 @@ suite('TddCycleView Test Suite', () => {
 
         stateManager.setPhase(TddPhase.REFACTORING);
         assert.ok(mockWebview.html.includes('REFACTORING'));
+    });
+
+    test("Should handle setPhase message correctly", async () => {
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+        
+        const setPhasespy = sinon.spy(stateManager, 'setPhase');
+        
+        tddCycleView.resolveWebviewView(mockWebviewView, context, token);
+        
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'setPhase', phase: 'red' });
+        
+        assert.ok(setPhasespy.calledWith(TddPhase.RED));
     });
 });
