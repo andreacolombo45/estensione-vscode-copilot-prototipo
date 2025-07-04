@@ -105,4 +105,18 @@ suite('TddCycleView Test Suite', () => {
         
         assert.ok(resetSpy.called);
     });
+
+    test("Should update view when state changes", () => {
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddCycleView.resolveWebviewView(mockWebviewView, context, token);
+
+        const initialHtml = mockWebview.html;
+
+        stateManager.setPhase(TddPhase.GREEN);
+        
+        assert.notStrictEqual(mockWebview.html, initialHtml);
+        assert.ok(mockWebview.html.includes('GREEN'));
+    });
 });
