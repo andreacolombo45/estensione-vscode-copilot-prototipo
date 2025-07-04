@@ -49,6 +49,7 @@ suite('TddStateManager Test Suite', () => {
             { id: '1', title: 'Story 1', description: 'Description 1' },
             { id: '2', title: 'Story 2', description: 'Description 2' }
         ];
+
         stateManager.setUserStories(stories);
         let state = stateManager.state;
         assert.deepStrictEqual(state.userStories, stories);
@@ -69,6 +70,7 @@ suite('TddStateManager Test Suite', () => {
             { id: '1', title: 'Test 1', description: 'Description 1', code: 'code1' },
             { id: '2', title: 'Test 2', description: 'Description 2', code: 'code2' }
         ];
+
         stateManager.setTestProposals(testProposals);
         let state = stateManager.state;
         assert.deepStrictEqual(state.testProposals, testProposals);
@@ -82,5 +84,16 @@ suite('TddStateManager Test Suite', () => {
         state = stateManager.state;
         assert.strictEqual(state.selectedTest?.id, '1');
         assert.strictEqual(state.selectedTest?.title, 'Test 1');
+    });
+
+    test("Should manage refactoring suggestions correctly", () => {
+        const suggestions = [
+            { id: '1', title: 'Refactor 1', description: 'Description 1' },
+            { id: '2', title: 'Refactor 2', description: 'Description 2' }
+        ];
+
+        stateManager.setRefactoringSuggestions(suggestions);
+        const state = stateManager.state;
+        assert.deepStrictEqual(state.refactoringSuggestions, suggestions);
     });
 });
