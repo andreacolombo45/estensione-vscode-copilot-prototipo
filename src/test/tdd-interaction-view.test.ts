@@ -174,4 +174,27 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(generateRefactoringSuggestionsStub.calledOnce);
         assert.ok(setRefactoringSuggestionsSpy.calledWith([{ id: 'refactor1', title : 'Refactor 1', description: 'Refactor description' }]));
     });
+
+    test("Should handle refreshUserStories message", async () => {
+        const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
+            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+        ]);
+
+        const setUserStoriesSpy = sinon.spy(stateManager, 'setUserStories');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'refreshUserStories' });
+
+        assert.ok(generateUserStoriesStub.called);
+        assert.ok(setUserStoriesSpy.calledWith([
+            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+        ]));
+    });
 });
