@@ -14,7 +14,7 @@ suite('TddInteractionView Test Suite', () => {
     let mockWebview: vscode.Webview;
     let stateManager: TddStateManager;
     let aiService: AiService;
-    let codeAnalysisService: CodeAnalysisService
+    let codeAnalysisService: CodeAnalysisService;
 
     setup(() => {
         (TddStateManager as any).instance = undefined;
@@ -192,6 +192,31 @@ suite('TddInteractionView Test Suite', () => {
         await messageHandler({ command: 'refreshUserStories' });
 
         assert.ok(generateUserStoriesStub.called);
+        assert.ok(setUserStoriesSpy.calledWith([
+            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+        ]));
+    });
+
+    test("Should handle completePhase message", async () => {
+        const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
+            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+        ]);
+
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const setUserStoriesSpy = sinon.spy(stateManager, 'setUserStories');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'completePhase' });
+
+        assert.ok(generateUserStoriesStub.called);
+        assert.ok(setPhaseSpy.calledWith(TddPhase.PICK));
         assert.ok(setUserStoriesSpy.calledWith([
             { id: '1', title: 'Test User Story 1', description: 'Description 1' },
             { id: '2', title: 'Test User Story 2', description: 'Description 2' }
