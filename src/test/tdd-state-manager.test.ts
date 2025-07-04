@@ -108,4 +108,23 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.testResults?.success, false);
         assert.strictEqual(state.testResults?.message, 'Some tests failed');
     });
+
+    test("Should reset state correctly", () => {
+        stateManager.setPhase(TddPhase.RED);
+        stateManager.setUserStories([{ id: '1', title: 'Story 1', description: 'Description 1' }]);
+        stateManager.setTestProposals([{ id: '1', title: 'Test 1', description: 'Description 1', code: 'code1' }]);
+        stateManager.setRefactoringSuggestions([{ id: '1', title: 'Refactor 1', description: 'Description 1' }]);
+        stateManager.setTestResults(true, 'All tests passed');
+
+        stateManager.reset();
+        const state = stateManager.state;
+        assert.strictEqual(state.currentPhase, TddPhase.PICK);
+        assert.strictEqual(state.currentMode, AiMode.ASK);
+        assert.strictEqual(state.userStories.length, 0);
+        assert.strictEqual(state.testProposals.length, 0);
+        assert.strictEqual(state.refactoringSuggestions.length, 0);
+        assert.strictEqual(state.selectedUserStory, undefined);
+        assert.strictEqual(state.selectedTest, undefined);
+        assert.strictEqual(state.testResults, undefined);
+    }); 
 });
