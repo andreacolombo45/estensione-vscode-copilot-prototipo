@@ -119,4 +119,16 @@ suite('TddCycleView Test Suite', () => {
         assert.notStrictEqual(mockWebview.html, initialHtml);
         assert.ok(mockWebview.html.includes('GREEN'));
     });
+
+    test("Should display current mode correctly", () => {
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        stateManager.setPhase(TddPhase.RED);
+        tddCycleView.resolveWebviewView(mockWebviewView, context, token);
+        assert.ok(mockWebview.html.includes('MENTOR'));
+
+        stateManager.setPhase(TddPhase.GREEN);
+        assert.ok(mockWebview.html.includes('ASK'));
+    });
 });
