@@ -71,4 +71,20 @@ suite('AiService Test Suite', () => {
 
         assert.notDeepStrictEqual(proposals1, proposals2);
     });
+
+    test("Should generate refactoring suggestions", async () => {
+        const suggestions = await aiService.generateRefactoringSuggestions();
+
+        assert.ok(Array.isArray(suggestions));
+        assert.ok(suggestions.length > 0);
+        
+        suggestions.forEach(suggestion => {
+            assert.ok(suggestion.id);
+            assert.ok(suggestion.title);
+            assert.ok(suggestion.description);
+            assert.strictEqual(typeof suggestion.id, 'string');
+            assert.strictEqual(typeof suggestion.title, 'string');
+            assert.strictEqual(typeof suggestion.description, 'string');
+        }); 
+    });
 });
