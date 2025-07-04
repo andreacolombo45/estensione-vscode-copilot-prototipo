@@ -52,4 +52,23 @@ suite('AiService Test Suite', () => {
             assert.strictEqual(typeof proposal.description, 'string');
             assert.strictEqual(typeof proposal.code, 'string');         });
     });
+
+    test("Should generate different test proposals for different user stories", async () => {
+        const userStory1 = {
+            id: 'us1',
+            title: 'User Story 1',
+            description: 'Description for User Story 1'
+        };
+
+        const userStory2 = {
+            id: 'us2',
+            title: 'User Story 2',
+            description: 'Description for User Story 2'
+        };
+
+        const proposals1 = await aiService.generateTestProposals(userStory1);
+        const proposals2 = await aiService.generateTestProposals(userStory2);
+
+        assert.notDeepStrictEqual(proposals1, proposals2);
+    });
 });
