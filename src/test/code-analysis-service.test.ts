@@ -6,10 +6,13 @@ import { CodeAnalysisService } from '../services/code-analysis-service';
 suite('CodeAnalysisService Test Suite', () => {
     let codeAnalysisService: CodeAnalysisService;
     let workspaceFoldersStub: sinon.SinonStub;
+    let showErrorMessageSpy: sinon.SinonSpy;
 
     setup(() => {
         (CodeAnalysisService as any).instance = undefined;
         codeAnalysisService = CodeAnalysisService.getInstance();
+        
+        showErrorMessageSpy = sinon.spy(vscode.window, 'showErrorMessage');
     });
 
     teardown(() => {
@@ -56,5 +59,17 @@ suite('CodeAnalysisService Test Suite', () => {
         assert.ok(result.sourceFiles.every(file => 
             !file.includes('.test.') && !file.includes('.spec.')
         ));
+    });
+
+    test('Should handle workspace without folders', async () => {
+        workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value(undefined);
+        
+        const result = await codeAnalysisService.analyzeWorkspace();
+        
+        assert.strictEqual(result.language, 'unknown');
+        assert.strictEqual(result.hasTests, false);
+        assert.strictEqual(result.testFiles.length, 0);
+        assert.strictEqual(result.sourceFiles.length, 0);
+        assert.ok(showErrorMessageSpy.called);
     });
 });
