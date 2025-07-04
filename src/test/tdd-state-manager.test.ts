@@ -41,4 +41,21 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(stateManager.state.currentPhase, TddPhase.GREEN);
         assert.strictEqual(stateManager.state.currentMode, AiMode.ASK);
     });
+
+    test("Should manage user stories correctly", () => {
+        const stories = [
+            { id: '1', title: 'Story 1', description: 'Description 1' },
+            { id: '2', title: 'Story 2', description: 'Description 2' }
+        ];
+        stateManager.setUserStories(stories);
+        assert.deepStrictEqual(stateManager.state.userStories, stories);
+
+        stateManager.selectUserStory('1');
+        assert.strictEqual(stateManager.state.selectedUserStory?.id, '1');
+        assert.strictEqual(stateManager.state.selectedUserStory?.title, 'Story 1');
+
+        stateManager.selectUserStory('3'); 
+        assert.strictEqual(stateManager.state.selectedUserStory?.id, '1');
+        assert.strictEqual(stateManager.state.selectedUserStory?.title, 'Story 1');
+    });
 });
