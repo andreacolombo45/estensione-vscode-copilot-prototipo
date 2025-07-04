@@ -147,4 +147,31 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(insertTestCodeStub.called);
         assert.ok(showErrorMessageStub.calledWith('Non è stato possibile inserire il codice di test nel file.'));
     });
+
+    test("Should handle verifyTests message", async () => {
+        const verifyTestsStub = sinon.stub(aiService, 'verifyTests').resolves({
+            success: true,
+            message: 'All tests passed'
+        });
+
+        const setTestResultsSpy = sinon.spy(stateManager, 'setTestResults');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const setRefactoringSuggestionsSpy = sinon.spy(stateManager, 'setRefactoringSuggestions');
+        const generateRefactoringSuggestionsStub = sinon.stub(aiService, 'generateRefactoringSuggestions')
+            .resolves([{ id: 'refactor1', title: 'Refactor 1', description: 'Refactor description' }]);
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'verifyTests' });
+
+        assert.ok(verifyTestsStub.calledOnce);
+        assert.ok(setTestResultsSpy.calledWith(true, 'All tests passed' ));
+        assert.ok(setPhaseSpy.calledWith(TddPhase.REFACTORING));
+        assert.ok(generateRefactoringSuggestionsStub.calledOnce);
+        assert.ok(setRefactoringSuggestionsSpy.calledWith([{ id: 'refactor1', title : 'Refactor 1', description: 'Refactor description' }]));
+    });
 });
