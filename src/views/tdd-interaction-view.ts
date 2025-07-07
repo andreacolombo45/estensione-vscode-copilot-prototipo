@@ -69,9 +69,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         const state = this._stateManager.state;
                         if (state.selectedTest) {
                             this._stateManager.setTestEditingMode(
-                                true,
-                                state.selectedTest.code,
-                                state.selectedTest.targetFile || 'test.js'
+                                true
                             );
                         }
                     }

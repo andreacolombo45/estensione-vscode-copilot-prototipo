@@ -119,7 +119,7 @@ suite('TddInteractionView Test Suite', () => {
         await messageHandler({ command: 'selectTestProposal', testId: 'test1' });
 
         assert.ok(selectTestProposalSpy.calledWith('test1'));
-        assert.ok(setTestEditingModeSpy.calledWith(true, testProposal.code, testProposal.targetFile));
+        assert.ok(setTestEditingModeSpy.calledWith(true));
     });
 
     test("Should handle verifyTests message", async () => {
