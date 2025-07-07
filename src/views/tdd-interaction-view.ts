@@ -66,19 +66,13 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 case 'selectTestProposal':
                     if (data.testId) {
                         this._stateManager.selectTestProposal(data.testId);
-                        this._stateManager.setPhase(TddPhase.GREEN);
-                        
-                        // Inserisci il test nel file appropriato
                         const state = this._stateManager.state;
                         if (state.selectedTest) {
-                            const success = await this._codeAnalysisService.insertTestCode(
+                            this._stateManager.setTestEditingMode(
+                                true,
                                 state.selectedTest.code,
                                 state.selectedTest.targetFile || 'test.js'
                             );
-                            
-                            if (!success) {
-                                vscode.window.showErrorMessage('Non è stato possibile inserire il codice di test nel file.');
-                            }
                         }
                     }
                     break;

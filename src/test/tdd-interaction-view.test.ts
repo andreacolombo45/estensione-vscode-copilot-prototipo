@@ -102,10 +102,9 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(generateTestProposalsStub.calledWith(mockUserStory));
     });
 
-    test("Should handle selectTestProposal message and insert test in file", async () => {
+    test("Should handle selectTestProposal message and update editing mode", async () => {
         const selectTestProposalSpy = sinon.spy(stateManager, 'selectTestProposal');
-        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
-        const insertTestCodeStub = sinon.stub(codeAnalysisService, 'insertTestCode').resolves(true);
+        const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
 
         const testProposal = { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' };
 
@@ -120,32 +119,7 @@ suite('TddInteractionView Test Suite', () => {
         await messageHandler({ command: 'selectTestProposal', testId: 'test1' });
 
         assert.ok(selectTestProposalSpy.calledWith('test1'));
-        assert.ok(setPhaseSpy.calledWith(TddPhase.GREEN));
-        assert.ok(insertTestCodeStub.called);
-    });
-
-    test("Should handle selectTestProposal message and show error", async () => {
-        const selectTestProposalSpy = sinon.spy(stateManager, 'selectTestProposal');
-        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
-        const insertTestCodeStub = sinon.stub(codeAnalysisService, 'insertTestCode').resolves(false);
-        const showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
-
-        const testProposal = { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' };
-
-        stateManager.setTestProposals([testProposal]);
-
-        const context = {} as vscode.WebviewViewResolveContext;
-        const token = {} as vscode.CancellationToken;
-
-        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
-
-        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
-        await messageHandler({ command: 'selectTestProposal', testId: 'test1' });
-
-        assert.ok(selectTestProposalSpy.calledWith('test1'));
-        assert.ok(setPhaseSpy.calledWith(TddPhase.GREEN));
-        assert.ok(insertTestCodeStub.called);
-        assert.ok(showErrorMessageStub.calledWith('Non è stato possibile inserire il codice di test nel file.'));
+        assert.ok(setTestEditingModeSpy.calledWith(true, testProposal.code, testProposal.targetFile));
     });
 
     test("Should handle verifyTests message", async () => {
