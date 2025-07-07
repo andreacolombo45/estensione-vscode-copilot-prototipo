@@ -137,4 +137,14 @@ suite('TddStateManager Test Suite', () => {
 
         stateManager.setPhase(TddPhase.RED);
     });
+
+    test("Should handle test editing mode", () => {
+        stateManager.setTestEditingMode(true);
+        let state = stateManager.state;
+        assert.strictEqual(state.isEditingTest, true);
+
+        stateManager.setTestEditingMode(false);
+        state = stateManager.state;
+        assert.strictEqual(state.isEditingTest, false);
+    }); 
 });

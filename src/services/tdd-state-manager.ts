@@ -135,6 +135,11 @@ export class TddStateManager {
     }
 
     public setTestEditingMode(isEditing: boolean): void {
+        this._state = {
+            ...this._state,
+            isEditingTest: isEditing
+        };
+        this._notifyStateChanged();
     }
 
     /**
