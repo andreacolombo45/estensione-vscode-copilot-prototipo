@@ -196,4 +196,25 @@ suite('TddInteractionView Test Suite', () => {
             { id: '2', title: 'Test User Story 2', description: 'Description 2' }
         ]));
     });
+
+    test("Should handle confirmTestCode message", async () => {
+        const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const insertTestCodeStub = sinon.stub(codeAnalysisService, 'insertTestCode' as any).resolves(true);
+
+        const testCode = 'test code';
+        const targetFile = 'test.js';
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'confirmTestCode', testCode, targetFile });
+
+        assert.ok(setTestEditingModeSpy.calledWith(false));
+        assert.ok(setPhaseSpy.calledWith(TddPhase.GREEN));
+        assert.ok(insertTestCodeStub.calledWith(testCode, targetFile));
+    });
 });
