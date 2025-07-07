@@ -115,6 +115,10 @@ suite('TddStateManager Test Suite', () => {
         stateManager.setTestProposals([{ id: '1', title: 'Test 1', description: 'Description 1', code: 'code1' }]);
         stateManager.setRefactoringSuggestions([{ id: '1', title: 'Refactor 1', description: 'Description 1' }]);
         stateManager.setTestResults(true, 'All tests passed');
+        stateManager.setTestEditingMode(true);
+        stateManager.selectUserStory('1');
+        stateManager.selectTestProposal('1');
+        stateManager.updateModifiedSelectedTest('new code', 'testFile.js');
 
         stateManager.reset();
         const state = stateManager.state;
@@ -126,6 +130,8 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.selectedUserStory, undefined);
         assert.strictEqual(state.selectedTest, undefined);
         assert.strictEqual(state.testResults, undefined);
+        assert.strictEqual(state.isEditingTest, false);
+        assert.strictEqual(state.modifiedSelectedTest, undefined);
     }); 
 
     test("Should notify listeners on state change", (done) => {

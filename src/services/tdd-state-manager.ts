@@ -167,7 +167,12 @@ export class TddStateManager {
             currentMode: AiMode.ASK,
             testProposals: [],
             userStories: [],
-            refactoringSuggestions: []
+            refactoringSuggestions: [],
+            selectedUserStory: undefined,
+            selectedTest: undefined,
+            modifiedSelectedTest: undefined,
+            testResults: undefined,
+            isEditingTest: false
         };
         this._notifyStateChanged();
     }
