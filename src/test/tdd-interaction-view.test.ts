@@ -217,4 +217,20 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setPhaseSpy.calledWith(TddPhase.GREEN));
         assert.ok(insertTestCodeStub.calledWith(testCode, targetFile));
     });
+
+    test("Should handle cancelEditTest message", async () => {
+        const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'cancelEditTest' });
+
+        assert.ok(setTestEditingModeSpy.calledWith(false));
+        assert.ok(setPhaseSpy.calledWith(TddPhase.RED));
+    });
 });

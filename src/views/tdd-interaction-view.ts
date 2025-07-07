@@ -92,6 +92,11 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         }
                     }
                     break;
+                
+                case 'cancelEditTest':
+                    this._stateManager.setTestEditingMode(false);
+                    this._stateManager.setPhase(TddPhase.RED);
+                    break;
                     
                 case 'verifyTests':
                     // Esegui i test e verifica i risultati
@@ -329,6 +334,23 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 function refreshUserStories() {
                     vscode.postMessage({
                         command: 'refreshUserStories'
+                    });
+                }
+
+                function cancelEditTest() {
+                    vscode.postMessage({
+                        command: 'cancelEditTest'
+                    });
+                }
+                
+                function confirmTestCode() {
+                    const testCode = document.getElementById('testCode').value;
+                    const targetFile = document.getElementById('targetFile').value;
+                    
+                    vscode.postMessage({
+                        command: 'confirmTestCode',
+                        testCode: testCode,
+                        targetFile: targetFile
                     });
                 }
             </script>
