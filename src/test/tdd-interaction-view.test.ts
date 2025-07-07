@@ -200,6 +200,7 @@ suite('TddInteractionView Test Suite', () => {
     test("Should handle confirmTestCode message", async () => {
         const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const updateModifiedSelectedTestSpy = sinon.spy(stateManager, 'updateModifiedSelectedTest');
         const insertTestCodeStub = sinon.stub(codeAnalysisService, 'insertTestCode' as any).resolves(true);
 
         const testCode = 'test code';
@@ -216,6 +217,7 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setTestEditingModeSpy.calledWith(false));
         assert.ok(setPhaseSpy.calledWith(TddPhase.GREEN));
         assert.ok(insertTestCodeStub.calledWith(testCode, targetFile));
+        assert.ok(updateModifiedSelectedTestSpy.calledWith(testCode, targetFile));
     });
 
     test("Should handle cancelEditTest message", async () => {

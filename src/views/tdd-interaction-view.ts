@@ -77,6 +77,8 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 
                 case 'confirmTestCode':
                     if (data.testCode && data.targetFile) {
+                        this._stateManager.updateModifiedSelectedTest(data.testCode, data.targetFile);
+                        
                         const success = await this._codeAnalysisService.insertTestCode(
                             data.testCode,
                             data.targetFile
@@ -159,7 +161,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 break;
                 
             case TddPhase.GREEN:
-                phaseContent = this._getGreenPhaseHtml(state.selectedTest);
+                phaseContent = this._getGreenPhaseHtml(state.modifiedSelectedTest);
                 break;
                 
             case TddPhase.REFACTORING:
