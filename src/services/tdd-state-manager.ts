@@ -142,6 +142,22 @@ export class TddStateManager {
         this._notifyStateChanged();
     }
 
+    public updateModifiedSelectedTest(testCode: string, targetFile?: string): void {
+        if (!this._state.selectedTest) {
+            return;
+        }
+
+        this._state = {
+            ...this._state,
+            modifiedSelectedTest: {
+                ...this._state.selectedTest,
+                code: testCode,
+                targetFile: targetFile || this._state.selectedTest.targetFile
+            }
+        };
+        this._notifyStateChanged();
+    }
+
     /**
      * Ripristina lo stato al ciclo iniziale
      */

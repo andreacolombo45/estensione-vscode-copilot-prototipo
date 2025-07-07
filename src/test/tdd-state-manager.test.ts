@@ -147,4 +147,15 @@ suite('TddStateManager Test Suite', () => {
         state = stateManager.state;
         assert.strictEqual(state.isEditingTest, false);
     }); 
+
+    test("Should update modified selected test", () => {
+        const testProposal = { id: '1', title: 'Test 1', description: 'Description 1', code: 'code1' };
+        stateManager.setTestProposals([testProposal]);
+        stateManager.selectTestProposal('1');
+        stateManager.updateModifiedSelectedTest('new code', 'testFile.js');
+
+        const state = stateManager.state;
+        assert.strictEqual(state.modifiedSelectedTest?.code, 'new code');
+        assert.strictEqual(state.modifiedSelectedTest?.targetFile, 'testFile.js');
+    });
 });

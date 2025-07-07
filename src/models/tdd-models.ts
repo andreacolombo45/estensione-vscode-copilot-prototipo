@@ -54,6 +54,7 @@
         currentMode: AiMode;
         selectedUserStory?: UserStory;
         selectedTest?: TestProposal;
+        modifiedSelectedTest?: TestProposal; 
         testProposals: TestProposal[];
         userStories: UserStory[];
         refactoringSuggestions: RefactoringSuggestion[];
