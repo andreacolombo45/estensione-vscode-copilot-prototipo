@@ -66,21 +66,36 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 case 'selectTestProposal':
                     if (data.testId) {
                         this._stateManager.selectTestProposal(data.testId);
-                        this._stateManager.setPhase(TddPhase.GREEN);
-                        
-                        // Inserisci il test nel file appropriato
                         const state = this._stateManager.state;
                         if (state.selectedTest) {
-                            const success = await this._codeAnalysisService.insertTestCode(
-                                state.selectedTest.code,
-                                state.selectedTest.targetFile || 'test.js'
+                            this._stateManager.setTestEditingMode(
+                                true
                             );
-                            
-                            if (!success) {
-                                vscode.window.showErrorMessage('Non è stato possibile inserire il codice di test nel file.');
-                            }
                         }
                     }
+                    break;
+                
+                case 'confirmTestCode':
+                    if (data.testCode && data.targetFile) {
+                        this._stateManager.updateModifiedSelectedTest(data.testCode, data.targetFile);
+                        
+                        const success = await this._codeAnalysisService.insertTestCode(
+                            data.testCode,
+                            data.targetFile
+                        );
+
+                        if (success) {
+                            this._stateManager.setTestEditingMode(false);
+                            this._stateManager.setPhase(TddPhase.GREEN);
+                        } else {
+                            vscode.window.showErrorMessage('Non è stato possibile inserire il codice di test nel file.');
+                        }
+                    }
+                    break;
+                
+                case 'cancelEditTest':
+                    this._stateManager.setTestEditingMode(false);
+                    this._stateManager.setPhase(TddPhase.RED);
                     break;
                     
                 case 'verifyTests':
@@ -146,7 +161,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 break;
                 
             case TddPhase.GREEN:
-                phaseContent = this._getGreenPhaseHtml(state.selectedTest);
+                phaseContent = this._getGreenPhaseHtml(state.modifiedSelectedTest);
                 break;
                 
             case TddPhase.REFACTORING:
@@ -321,6 +336,23 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         command: 'refreshUserStories'
                     });
                 }
+
+                function cancelEditTest() {
+                    vscode.postMessage({
+                        command: 'cancelEditTest'
+                    });
+                }
+                
+                function confirmTestCode() {
+                    const testCode = document.getElementById('testCode').value;
+                    const targetFile = document.getElementById('targetFile').value;
+                    
+                    vscode.postMessage({
+                        command: 'confirmTestCode',
+                        testCode: testCode,
+                        targetFile: targetFile
+                    });
+                }
             </script>
         </body>
         </html>
@@ -361,6 +393,12 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             return '<div>Nessuna user story selezionata. Torna alla fase PICK.</div>';
         }
         
+        const state = this._stateManager.state;
+
+        if (state.isEditingTest && state.selectedTest) {
+            return this._getTestEditingHtml(state.selectedTest, state.selectedTest.code, state.selectedTest.targetFile || 'test.js');
+        }
+
         let proposalsHtml = '';
         
         if (testProposals.length === 0) {
@@ -373,6 +411,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     <div class="card-description">${test.description}</div>
                     <div class="code-block">${this._escapeHtml(test.code)}</div>
                     <div>File di destinazione: ${test.targetFile || 'test.js'}</div>
+                    <div class="action-hint">Clicca per modificare e inserire</div>
                 </div>
                 `;
             });
@@ -390,6 +429,131 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <p>Seleziona uno dei seguenti test proposti:</p>
         
         ${proposalsHtml}
+        `;
+    }
+
+    private _getTestEditingHtml(selectedTest: TestProposal, editingCode?: string, editingFile?: string): string {
+        const testCode = editingCode || selectedTest.code;
+        const targetFile = editingFile || selectedTest.targetFile || 'test.js';
+
+        return `
+        <div class="phase-header">
+            <span class="phase-emoji">✏️</span>
+            <h1>Fase RED - Modifica Test</h1>
+        </div>
+
+        <h2>Test selezionato: ${selectedTest.title}</h2>
+        <p>${selectedTest.description}</p>
+
+        <div class="edit-container">
+            <div class="form-group">
+                <label for="testCode">Codice del test:</label>
+                <textarea
+                id="testCode"
+        class="code-editor"
+        rows="15"
+        placeholder="Modifica il codice del test..."
+                >${this._escapeHtml(testCode)}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="targetFile">File di destinazione:</label>
+                <input
+                type="text"
+        id="targetFile"
+        value="${targetFile}"
+        class="file-input"
+        placeholder="Percorso del file di test"
+                >
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="confirmTestCode()">
+                    ✅ Conferma e Inserisci
+                </button>
+                <button class="btn btn-secondary" onclick="cancelEditTest()">
+                    ❌ Annulla
+                </button>
+            </div>
+        </div>
+
+        <style>
+            .edit-container {
+            background-color: var(--vscode-input-background);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid var(--vscode-input-border);
+        }
+
+            .code-editor {
+            width: 100%;
+            min-height: 300px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            padding: 10px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+            .file-input {
+            width: 100%;
+            padding: 8px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+            .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--vscode-foreground);
+        }
+
+            .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+            .btn-primary {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+        }
+
+            .btn-primary:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+            .file-target {
+            font-size: 0.8em;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 8px;
+        }
+
+            .action-hint {
+            font-size: 0.75em;
+            color: var(--vscode-textLink-foreground);
+            font-style: italic;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+            .card:hover .action-hint {
+            color: var(--vscode-textLink-activeForeground);
+        }
+        </style>
         `;
     }
 

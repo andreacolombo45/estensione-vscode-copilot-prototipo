@@ -134,6 +134,30 @@ export class TddStateManager {
         this._notifyStateChanged();
     }
 
+    public setTestEditingMode(isEditing: boolean): void {
+        this._state = {
+            ...this._state,
+            isEditingTest: isEditing
+        };
+        this._notifyStateChanged();
+    }
+
+    public updateModifiedSelectedTest(testCode: string, targetFile?: string): void {
+        if (!this._state.selectedTest) {
+            return;
+        }
+
+        this._state = {
+            ...this._state,
+            modifiedSelectedTest: {
+                ...this._state.selectedTest,
+                code: testCode,
+                targetFile: targetFile || this._state.selectedTest.targetFile
+            }
+        };
+        this._notifyStateChanged();
+    }
+
     /**
      * Ripristina lo stato al ciclo iniziale
      */
@@ -143,7 +167,12 @@ export class TddStateManager {
             currentMode: AiMode.ASK,
             testProposals: [],
             userStories: [],
-            refactoringSuggestions: []
+            refactoringSuggestions: [],
+            selectedUserStory: undefined,
+            selectedTest: undefined,
+            modifiedSelectedTest: undefined,
+            testResults: undefined,
+            isEditingTest: false
         };
         this._notifyStateChanged();
     }
