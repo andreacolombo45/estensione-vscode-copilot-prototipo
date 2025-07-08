@@ -1,6 +1,6 @@
 import * as sinon from 'sinon';
 import * as assert from 'assert';
-import { AiClient } from "../services/AiClient";
+import { AiClient } from "../services/ai-client";
 
 suite('AiClient Test Suite', () => {
     let aiClient: AiClient;
