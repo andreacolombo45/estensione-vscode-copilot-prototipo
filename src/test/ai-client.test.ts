@@ -1,5 +1,6 @@
 import * as sinon from 'sinon';
 import * as assert from 'assert';
+import * as vscode from 'vscode';
 import { AiClient } from "../services/ai-client";
 
 suite('AiClient Test Suite', () => {
@@ -69,5 +70,23 @@ suite('AiClient Test Suite', () => {
         await assert.rejects(() => aiClient.sendRequest("test prompt", { model: "gpt-3.5-turbo" }), {
             message: "AI request failed: 404 Not Found"
         });
+    });
+
+    test("Should show error message if API key is not set on startup", async () => {
+        const configStub = {
+            get: sinon.stub().returns("")
+        };
+
+        const workspaceStub = sinon.stub(vscode.workspace, 'getConfiguration').returns(configStub as any);
+
+        const showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
+        
+        const client = new AiClient();
+
+        assert.strictEqual(showErrorMessageStub.calledOnce, true);
+        assert.strictEqual(showErrorMessageStub.calledWith('OpenAI API key is not set. Please configure it in settings.'), true);
+
+        workspaceStub.restore();
+        showErrorMessageStub.restore();
     });
 });

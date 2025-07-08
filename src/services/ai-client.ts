@@ -1,11 +1,16 @@
+import * as vscode from 'vscode';
 import { AiRequest, AiRequestOptions, AIResponse } from '../models/tdd-models';
 
 export class AiClient {
     private readonly apiKey: string;
     private readonly apiUrl: string = 'https://api.openai.com/v1/chat/completions';
 
-    constructor(apiKey: string) {
-        this.apiKey = apiKey;
+    constructor(apiKey?: string) {
+        this.apiKey = apiKey || vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+
+        if (!this.apiKey) {
+            vscode.window.showErrorMessage('OpenAI API key is not set. Please configure it in settings.');
+        }
     }
 
     public async sendRequest<T> (
