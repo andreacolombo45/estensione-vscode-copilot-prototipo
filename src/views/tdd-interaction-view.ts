@@ -4,9 +4,6 @@ import { TddStateManager } from '../services/tdd-state-manager';
 import { AiService } from '../services/ai-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 
-/**
- * WebView che gestisce l'interazione con il mentor AI
- */
 export class TddInteractionView implements vscode.WebviewViewProvider {
     public static readonly viewType = 'tdd-mentor-ai-interaction';
     
@@ -22,7 +19,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         this._aiService = AiService.getInstance();
         this._codeAnalysisService = CodeAnalysisService.getInstance();
         
-        // Registra listener per i cambiamenti di stato
         this._stateManager.onStateChanged(() => {
             if (this._view) {
                 this._updateView();
@@ -37,16 +33,13 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
-        // Configura il webview
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
         };
 
-        // Imposta il contenuto iniziale
         this._updateView();
 
-        // Gestisce i messaggi dal webview
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.command) {
                 case 'selectUserStory':
@@ -54,7 +47,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         this._stateManager.selectUserStory(data.storyId);
                         this._stateManager.setPhase(TddPhase.RED);
                         
-                        // Genera proposte di test per la storia selezionata
                         const state = this._stateManager.state;
                         if (state.selectedUserStory) {
                             const testProposals = await this._aiService.generateTestProposals(state.selectedUserStory);
@@ -99,31 +91,25 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     break;
                     
                 case 'verifyTests':
-                    // Esegui i test e verifica i risultati
                     const testResults = await this._aiService.verifyTests();
                     this._stateManager.setTestResults(testResults.success, testResults.message);
                     
-                    // Se i test hanno successo, passa alla fase di refactoring
                     if (testResults.success) {
                         this._stateManager.setPhase(TddPhase.REFACTORING);
                         
-                        // Genera suggerimenti di refactoring
                         const refactoringSuggestions = await this._aiService.generateRefactoringSuggestions();
                         this._stateManager.setRefactoringSuggestions(refactoringSuggestions);
                     }
                     break;
                     
                 case 'completePhase':
-                    // Completa la fase corrente e torna alla fase PICK
                     this._stateManager.setPhase(TddPhase.PICK);
                     
-                    // Genera nuove user stories
                     const userStories = await this._aiService.generateUserStories();
                     this._stateManager.setUserStories(userStories);
                     break;
                     
                 case 'refreshUserStories':
-                    // Genera nuove user stories
                     const stories = await this._aiService.generateUserStories();
                     this._stateManager.setUserStories(stories);
                     break;
@@ -138,7 +124,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
 
         const state = this._stateManager.state;
         
-        // Se è la prima volta che si carica la vista nella fase PICK, genera user stories
         if (state.currentPhase === TddPhase.PICK && state.userStories.length === 0) {
             const userStories = await this._aiService.generateUserStories();
             this._stateManager.setUserStories(userStories);
@@ -148,7 +133,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     }
 
     private async _getHtmlForWebview(state: TddState): Promise<string> {
-        // Contenuto specifico per ogni fase
         let phaseContent = '';
         
         switch (state.currentPhase) {
@@ -289,13 +273,43 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     margin-left: auto;
                     background: none;
                     border: none;
-                    color: var(--vscode-button-background);
+                    color: var(--vscode-foreground);
                     cursor: pointer;
                     font-size: 1em;
                 }
                 
                 .refresh-btn:hover {
                     color: var(--vscode-button-hoverBackground);
+                }
+
+                .tooltip {
+                    position: relative;
+                    display: inline-block;
+                }
+                
+                .tooltip .tooltip-text {
+                    visibility: hidden;
+                    width: 100px;
+                    background-color: var(--vscode-editorHoverWidget-background);
+                    color: var(--vscode-editorHoverWidget-foreground);
+                    text-align: center;
+                    border-radius: 4px;
+                    padding: 5px;
+                    position: absolute;
+                    z-index: 1;
+                    bottom: 125%;
+                    right: 0;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    font-size: 0.8em;
+                    pointer-events: none;
+                    border: 1px solid var(--vscode-editorHoverWidget-border);
+                    white-space: nowrap;
+                }
+                
+                .tooltip:hover .tooltip-text {
+                    visibility: visible;
+                    opacity: 1;
                 }
             </style>
         </head>
@@ -379,7 +393,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="phase-header">
             <span class="phase-emoji">📋</span>
             <h1>Fase PICK - Scegli una User Story</h1>
-            <button class="refresh-btn" onclick="refreshUserStories()">🔄</button>
+            <button class="refresh-btn tooltip" onclick="refreshUserStories()">
+                ⟳
+                <span class="tooltip-text">Ricarica Stories</span>
+            </button>
         </div>
         
         <p>Seleziona una delle seguenti user stories per iniziare il ciclo TDD:</p>
@@ -411,7 +428,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     <div class="card-description">${test.description}</div>
                     <div class="code-block">${this._escapeHtml(test.code)}</div>
                     <div>File di destinazione: ${test.targetFile || 'test.js'}</div>
-                    <div class="action-hint">Clicca per modificare e inserire</div>
                 </div>
                 `;
             });

@@ -1,14 +1,10 @@
 import * as vscode from 'vscode';
-import { AiMode, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
+import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
 
-/**
- * Servizio che gestisce l'interazione con i modelli AI
- */
 export class AiService {
     private static instance: AiService;
 
     private constructor() {
-        // Costruttore privato per il singleton
     }
 
     public static getInstance(): AiService {
@@ -18,14 +14,8 @@ export class AiService {
         return AiService.instance;
     }
 
-    /**
-     * Analizza il codice del progetto e genera user stories
-     * @returns Lista di user stories suggerite
-     */
     public async generateUserStories(): Promise<UserStory[]> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'integrazione con un modello AI
-            // Per ora, restituiamo dati di esempio
             return [
                 {
                     id: 'us1',
@@ -49,15 +39,8 @@ export class AiService {
         }
     }
 
-    /**
-     * Genera proposte di test basate su una user story
-     * @param userStory La user story selezionata
-     * @returns Lista di test proposti
-     */
     public async generateTestProposals(userStory: UserStory): Promise<TestProposal[]> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'integrazione con un modello AI
-            // Per ora, restituiamo dati di esempio
             if (userStory.id === 'us1') {
                 return [
                     {
@@ -111,7 +94,6 @@ test('should fail login with incorrect credentials', async () => {
                     }
                 ];
             } else {
-                // Esempi generici per altre user stories
                 return [
                     {
                         id: 'test1',
@@ -171,14 +153,8 @@ test('should throw error for invalid input', () => {
         }
     }
 
-    /**
-     * Genera suggerimenti di refactoring per il codice corrente
-     * @returns Lista di suggerimenti di refactoring
-     */
     public async generateRefactoringSuggestions(): Promise<RefactoringSuggestion[]> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'integrazione con un modello AI
-            // Per ora, restituiamo dati di esempio
             return [
                 {
                     id: 'refactor1',
@@ -205,14 +181,8 @@ test('should throw error for invalid input', () => {
         }
     }
 
-    /**
-     * Verifica i risultati dei test
-     * @returns Se i test sono stati eseguiti con successo e il messaggio associato
-     */
     public async verifyTests(): Promise<{ success: boolean; message: string }> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'esecuzione effettiva dei test
-            // Per ora, simuliamo un risultato di successo
             return {
                 success: true,
                 message: 'Tutti i test sono stati completati con successo!'
