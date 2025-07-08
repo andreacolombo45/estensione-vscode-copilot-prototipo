@@ -273,13 +273,43 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     margin-left: auto;
                     background: none;
                     border: none;
-                    color: var(--vscode-button-background);
+                    color: var(--vscode-foreground);
                     cursor: pointer;
                     font-size: 1em;
                 }
                 
                 .refresh-btn:hover {
                     color: var(--vscode-button-hoverBackground);
+                }
+
+                .tooltip {
+                    position: relative;
+                    display: inline-block;
+                }
+                
+                .tooltip .tooltip-text {
+                    visibility: hidden;
+                    width: 100px;
+                    background-color: var(--vscode-editorHoverWidget-background);
+                    color: var(--vscode-editorHoverWidget-foreground);
+                    text-align: center;
+                    border-radius: 4px;
+                    padding: 5px;
+                    position: absolute;
+                    z-index: 1;
+                    bottom: 125%;
+                    right: 0;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    font-size: 0.8em;
+                    pointer-events: none;
+                    border: 1px solid var(--vscode-editorHoverWidget-border);
+                    white-space: nowrap;
+                }
+                
+                .tooltip:hover .tooltip-text {
+                    visibility: visible;
+                    opacity: 1;
                 }
             </style>
         </head>
@@ -363,7 +393,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="phase-header">
             <span class="phase-emoji">📋</span>
             <h1>Fase PICK - Scegli una User Story</h1>
-            <button class="refresh-btn" onclick="refreshUserStories()">🔄</button>
+            <button class="refresh-btn tooltip" onclick="refreshUserStories()">
+                ⟳
+                <span class="tooltip-text">Ricarica Stories</span>
+            </button>
         </div>
         
         <p>Seleziona una delle seguenti user stories per iniziare il ciclo TDD:</p>
