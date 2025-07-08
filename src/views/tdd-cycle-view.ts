@@ -2,9 +2,6 @@ import * as vscode from 'vscode';
 import { TddPhase, TddState } from '../models/tdd-models';
 import { TddStateManager } from '../services/tdd-state-manager';
 
-/**
- * WebView che visualizza lo stato del ciclo TDD
- */
 export class TddCycleView implements vscode.WebviewViewProvider {
     public static readonly viewType = 'tdd-mentor-ai-cycle';
     
@@ -16,7 +13,6 @@ export class TddCycleView implements vscode.WebviewViewProvider {
         this._extensionUri = extensionUri;
         this._stateManager = TddStateManager.getInstance();
         
-        // Registra listener per i cambiamenti di stato
         this._stateManager.onStateChanged(() => {
             if (this._view) {
                 this._updateView();
@@ -31,16 +27,13 @@ export class TddCycleView implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
-        // Configura il webview
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
         };
 
-        // Imposta il contenuto iniziale
         this._updateView();
 
-        // Gestisce i messaggi dal webview
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.command) {
                 case 'setPhase':
@@ -65,13 +58,11 @@ export class TddCycleView implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlForWebview(state: TddState): string {
-        // Determinare quale fase è attiva
         const pickActive = state.currentPhase === TddPhase.PICK ? 'active' : '';
         const redActive = state.currentPhase === TddPhase.RED ? 'active' : '';
         const greenActive = state.currentPhase === TddPhase.GREEN ? 'active' : '';
         const refactorActive = state.currentPhase === TddPhase.REFACTORING ? 'active' : '';
         
-        // Determinare quali fasi sono disponibili
         const redDisabled = !state.selectedUserStory ? 'disabled' : '';
         const greenDisabled = !state.selectedTest ? 'disabled' : '';
         const refactorDisabled = !state.testResults?.success ? 'disabled' : '';

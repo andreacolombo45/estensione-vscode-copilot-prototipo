@@ -1,14 +1,10 @@
 import * as vscode from 'vscode';
-import { AiMode, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
+import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
 
-/**
- * Servizio che gestisce l'interazione con i modelli AI
- */
 export class AiService {
     private static instance: AiService;
 
     private constructor() {
-        // Costruttore privato per il singleton
     }
 
     public static getInstance(): AiService {
@@ -18,14 +14,8 @@ export class AiService {
         return AiService.instance;
     }
 
-    /**
-     * Analizza il codice del progetto e genera user stories
-     * @returns Lista di user stories suggerite
-     */
     public async generateUserStories(): Promise<UserStory[]> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'integrazione con un modello AI
-            // Per ora, restituiamo dati di esempio
             return [
                 {
                     id: 'us1',
@@ -49,15 +39,8 @@ export class AiService {
         }
     }
 
-    /**
-     * Genera proposte di test basate su una user story
-     * @param userStory La user story selezionata
-     * @returns Lista di test proposti
-     */
     public async generateTestProposals(userStory: UserStory): Promise<TestProposal[]> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'integrazione con un modello AI
-            // Per ora, restituiamo dati di esempio
             if (userStory.id === 'us1') {
                 return [
                     {
@@ -65,16 +48,16 @@ export class AiService {
                         title: 'Test di registrazione utente',
                         description: 'Verifica che un nuovo utente possa registrarsi con email e password valide',
                         code: `
-test('should register a new user with valid credentials', async () => {
-    const email = 'test@example.com';
-    const password = 'Password123!';
-    
-    const result = await userService.register(email, password);
-    
-    expect(result.success).toBe(true);
-    expect(result.user).toBeDefined();
-    expect(result.user.email).toBe(email);
-});`,
+                            test('should register a new user with valid credentials', async () => {
+                                const email = 'test@example.com';
+                                const password = 'Password123!';
+                                
+                                const result = await userService.register(email, password);
+                                
+                                expect(result.success).toBe(true);
+                                expect(result.user).toBeDefined();
+                                expect(result.user.email).toBe(email);
+                            });`,
                         targetFile: 'auth.test.js'
                     },
                     {
@@ -82,15 +65,15 @@ test('should register a new user with valid credentials', async () => {
                         title: 'Test di login utente',
                         description: 'Verifica che un utente possa accedere con credenziali corrette',
                         code: `
-test('should login user with correct credentials', async () => {
-    const email = 'existing@example.com';
-    const password = 'Password123!';
-    
-    const result = await userService.login(email, password);
-    
-    expect(result.success).toBe(true);
-    expect(result.token).toBeDefined();
-});`,
+                            test('should login user with correct credentials', async () => {
+                                const email = 'existing@example.com';
+                                const password = 'Password123!';
+                                
+                                const result = await userService.login(email, password);
+                                
+                                expect(result.success).toBe(true);
+                                expect(result.token).toBeDefined();
+                            });`,
                         targetFile: 'auth.test.js'
                     },
                     {
@@ -98,36 +81,35 @@ test('should login user with correct credentials', async () => {
                         title: 'Test di login fallito',
                         description: 'Verifica che il login fallisca con credenziali errate',
                         code: `
-test('should fail login with incorrect credentials', async () => {
-    const email = 'existing@example.com';
-    const password = 'WrongPassword123!';
-    
-    const result = await userService.login(email, password);
-    
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('Invalid credentials');
-});`,
+                            test('should fail login with incorrect credentials', async () => {
+                                const email = 'existing@example.com';
+                                const password = 'WrongPassword123!';
+                                
+                                const result = await userService.login(email, password);
+                                
+                                expect(result.success).toBe(false);
+                                expect(result.error).toBe('Invalid credentials');
+                            });`,
                         targetFile: 'auth.test.js'
                     }
                 ];
             } else {
-                // Esempi generici per altre user stories
                 return [
                     {
                         id: 'test1',
                         title: `Test per la user story: ${userStory.title}`,
                         description: `Verifica funzionalità principale per: ${userStory.title}`,
                         code: `
-test('should implement main functionality', () => {
-    // Arrange
-    const input = 'example input';
-    
-    // Act
-    const result = someFunction(input);
-    
-    // Assert
-    expect(result).toBeDefined();
-});`,
+                            test('should implement main functionality', () => {
+                                // Arrange
+                                const input = 'example input';
+                                
+                                // Act
+                                const result = someFunction(input);
+                                
+                                // Assert
+                                expect(result).toBeDefined();
+                            });`,
                         targetFile: 'feature.test.js'
                     },
                     {
@@ -135,16 +117,16 @@ test('should implement main functionality', () => {
                         title: `Test caso limite per: ${userStory.title}`,
                         description: `Verifica comportamento in caso limite per: ${userStory.title}`,
                         code: `
-test('should handle edge case correctly', () => {
-    // Arrange
-    const input = null;
-    
-    // Act
-    const result = someFunction(input);
-    
-    // Assert
-    expect(result).toBeNull();
-});`,
+                            test('should handle edge case correctly', () => {
+                                // Arrange
+                                const input = null;
+                                
+                                // Act
+                                const result = someFunction(input);
+                                
+                                // Assert
+                                expect(result).toBeNull();
+                            });`,
                         targetFile: 'feature.test.js'
                     },
                     {
@@ -152,15 +134,15 @@ test('should handle edge case correctly', () => {
                         title: `Test errore per: ${userStory.title}`,
                         description: `Verifica gestione degli errori per: ${userStory.title}`,
                         code: `
-test('should throw error for invalid input', () => {
-    // Arrange
-    const invalidInput = -1;
-    
-    // Act & Assert
-    expect(() => {
-        someFunction(invalidInput);
-    }).toThrow('Invalid input');
-});`,
+                            test('should throw error for invalid input', () => {
+                                // Arrange
+                                const invalidInput = -1;
+                                
+                                // Act & Assert
+                                expect(() => {
+                                    someFunction(invalidInput);
+                                }).toThrow('Invalid input');
+                            });`,
                         targetFile: 'feature.test.js'
                     }
                 ];
@@ -171,14 +153,8 @@ test('should throw error for invalid input', () => {
         }
     }
 
-    /**
-     * Genera suggerimenti di refactoring per il codice corrente
-     * @returns Lista di suggerimenti di refactoring
-     */
     public async generateRefactoringSuggestions(): Promise<RefactoringSuggestion[]> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'integrazione con un modello AI
-            // Per ora, restituiamo dati di esempio
             return [
                 {
                     id: 'refactor1',
@@ -205,14 +181,8 @@ test('should throw error for invalid input', () => {
         }
     }
 
-    /**
-     * Verifica i risultati dei test
-     * @returns Se i test sono stati eseguiti con successo e il messaggio associato
-     */
     public async verifyTests(): Promise<{ success: boolean; message: string }> {
         try {
-            // In una implementazione reale, qui ci sarebbe l'esecuzione effettiva dei test
-            // Per ora, simuliamo un risultato di successo
             return {
                 success: true,
                 message: 'Tutti i test sono stati completati con successo!'
