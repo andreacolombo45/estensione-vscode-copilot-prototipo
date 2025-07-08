@@ -395,7 +395,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     <div class="card-description">${test.description}</div>
                     <div class="code-block">${this._escapeHtml(test.code)}</div>
                     <div>File di destinazione: ${test.targetFile || 'test.js'}</div>
-                    <div class="action-hint">Clicca per modificare e inserire</div>
                 </div>
                 `;
             });
