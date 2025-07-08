@@ -45,3 +45,24 @@
         };
         isEditingTest?: boolean;
     }
+
+    export interface AiRequestOptions {
+        model: string;
+        maxTokens?: number;
+        temperature?: number;
+        systemPrompt?: string;
+    }
+
+    export interface AiRequest {
+        role: 'user' | 'system';
+        content: string;
+    }
+
+    export interface AIResponse {
+        choices: Array<{
+            message: {
+                content: string;
+            };
+        }>;
+    }
+
