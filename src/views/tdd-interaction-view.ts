@@ -113,6 +113,13 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     const stories = await this._aiService.generateUserStories();
                     this._stateManager.setUserStories(stories);
                     break;
+                
+                case 'refreshTestProposals':
+                    if (this._stateManager.state.selectedUserStory) {
+                        const proposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
+                        this._stateManager.setTestProposals(proposals);
+                    }
+                    break;
             }
         });
     }
@@ -351,6 +358,12 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     });
                 }
 
+                function refreshTestProposals() {
+                    vscode.postMessage({
+                        command: 'refreshTestProposals'
+                    });
+                }
+
                 function cancelEditTest() {
                     vscode.postMessage({
                         command: 'cancelEditTest'
@@ -437,6 +450,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="phase-header">
             <span class="phase-emoji">🔴</span>
             <h1>Fase RED - Scegli un Test</h1>
+            <button class="refresh-btn tooltip" onclick="refreshTestProposals()">
+                ⟳
+                <span class="tooltip-text">Ricarica Tests</span>
+            </button>
         </div>
         
         <h2>User Story selezionata: ${selectedUserStory.title}</h2>
