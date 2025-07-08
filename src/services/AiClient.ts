@@ -15,8 +15,8 @@ export class AiClient {
         if (!this.apiKey) {
             throw new Error('API key is not set.');
         }
-
-        const messages: AiRequest[] = [];
+        try {
+            const messages: AiRequest[] = [];
 
         if (options.systemPrompt) {
             messages.push({
@@ -52,5 +52,16 @@ export class AiClient {
             const data = await response.json() as AIResponse;
 
         return data as T;
+
+    } catch (error: any) {
+        console.error('Errore nella richiesta a OpenAI:', error);
+
+        if (error.response) {
+            console.error('Dettagli errore API:', error.response.data);
+            throw new Error(`Errore API OpenAI: ${error.response.data.error?.message || 'Errore sconosciuto'}`);
+        }
+
+        throw error;
+    }
     }
 }

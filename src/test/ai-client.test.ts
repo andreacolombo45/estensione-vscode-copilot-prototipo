@@ -61,4 +61,13 @@ suite('AiClient Test Suite', () => {
 
         assert.deepStrictEqual(response, mockResponseData);
     });
+
+    test("Should handle API errors", async () => {
+        const mockErrorResponse = new Response("Not Found", { status: 404 });
+        fetchStub.resolves(mockErrorResponse);
+
+        await assert.rejects(() => aiClient.sendRequest("test prompt", { model: "gpt-3.5-turbo" }), {
+            message: "AI request failed: 404 Not Found"
+        });
+    });
 });
