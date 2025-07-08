@@ -21,4 +21,44 @@ suite('AiClient Test Suite', () => {
             message: "API key is not set."
         });
     });
+
+    test("Should send request and return response", async () => {
+        const mockResponseData = {
+            choices: [{
+                message: {
+                    content: "Test response"
+                }
+            }]
+        };
+
+        const mockResponse = new Response(JSON.stringify(mockResponseData), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        fetchStub.resolves(mockResponse);
+
+        const response = await aiClient.sendRequest("test prompt", { model: "gpt-3.5-turbo" });
+        assert.ok(fetchStub.calledOnce);
+
+        const fetchArgs = fetchStub.getCall(0);
+        const url = fetchArgs.args[0];
+        const options = fetchArgs.args[1];
+
+        assert.strictEqual(url, "https://api.openai.com/v1/chat/completions");
+        assert.strictEqual(options.method, "POST");
+        assert.strictEqual(options.headers['Content-Type'], 'application/json');
+        assert.strictEqual(options.headers['Authorization'], 'Bearer test-api-key');
+
+        const body = JSON.parse(options.body);
+        assert.strictEqual(body.model, "gpt-3.5-turbo");
+        assert.strictEqual(body.temperature, 0.7);
+        assert.strictEqual(body.max_tokens, 2000);
+        assert.deepStrictEqual(body.messages, [{
+            role: "user",
+            content: "test prompt"
+        }]);
+
+        assert.deepStrictEqual(response, mockResponseData);
+    });
 });
