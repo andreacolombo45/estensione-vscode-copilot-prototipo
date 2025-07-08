@@ -120,6 +120,11 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         this._stateManager.setTestProposals(proposals);
                     }
                     break;
+
+                case 'refreshRefactoringSuggestions':
+                    const suggestions = await this._aiService.generateRefactoringSuggestions();
+                    this._stateManager.setRefactoringSuggestions(suggestions);
+                    break;
             }
         });
     }
@@ -364,6 +369,12 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     });
                 }
 
+                function refreshRefactoringSuggestions() {
+                    vscode.postMessage({
+                        command: 'refreshRefactoringSuggestions'
+                    });
+                }
+
                 function cancelEditTest() {
                     vscode.postMessage({
                         command: 'cancelEditTest'
@@ -452,7 +463,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             <h1>Fase RED - Scegli un Test</h1>
             <button class="refresh-btn tooltip" onclick="refreshTestProposals()">
                 ⟳
-                <span class="tooltip-text">Ricarica Tests</span>
+                <span class="tooltip-text">Ricarica Test</span>
             </button>
         </div>
         
@@ -652,6 +663,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="phase-header">
             <span class="phase-emoji">🔄</span>
             <h1>Fase REFACTORING - Migliora il Codice</h1>
+            <button class="refresh-btn tooltip" onclick="refreshRefactoringSuggestions()">
+                ⟳
+                <span class="tooltip-text">Ricarica Refactoring</span>
+            </button>
         </div>
         
         <p>Ecco alcuni suggerimenti per migliorare il tuo codice:</p>
