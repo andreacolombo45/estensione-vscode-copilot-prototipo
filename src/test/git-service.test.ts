@@ -28,4 +28,12 @@ suite('GitService Test Suite', () => {
         assert.ok(gitService instanceof GitService);
         assert.notStrictEqual(gitService, null);
     });
+
+    test('Should show error message on Git command failure', async () => {
+        execStub = sinon.stub().rejects(new Error('Git command failed'));
+
+        const gitService = await GitService.create(execStub);
+
+        assert.strictEqual(gitService, null);
+    });
 });
