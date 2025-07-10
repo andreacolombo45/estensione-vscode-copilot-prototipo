@@ -36,4 +36,14 @@ suite('GitService Test Suite', () => {
 
         assert.strictEqual(gitService, null);
     });
+
+    test('Should show error message when no workspace is open', async () => {
+        workspaceFolderStub.restore(); 
+        const showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
+
+        const gitService = await GitService.create(execStub);
+
+        assert.strictEqual(gitService, null);
+        sinon.assert.calledWith(showErrorMessageStub, 'No workspace folder is open.');
+    });
 });
