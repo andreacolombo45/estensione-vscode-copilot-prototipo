@@ -12,11 +12,10 @@ export class AiService {
     private codeAnalysisService: CodeAnalysisService;
     private readonly configs: typeof aiConfigs;
 
-    private constructor() {
+    private constructor(aiClient?: AiClient, codeAnalysisService?: CodeAnalysisService) {
         const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
-        this.aiClient = new AiClient(apikey);
-        this.codeAnalysisService = CodeAnalysisService.getInstance();
-
+        this.aiClient = aiClient || new AiClient(apikey);
+        this.codeAnalysisService = codeAnalysisService || CodeAnalysisService.getInstance();
         this.configs = aiConfigs;
     }
 
