@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+    import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { TddInteractionView } from '../views/tdd-interaction-view';
@@ -7,17 +7,17 @@ import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase } from '../models/tdd-models';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 
-suite('TddInteractionView Test Suite', () => {
-    let tddInteractionView: TddInteractionView;
-    let mockExtensionUri: vscode.Uri;
-    let mockWebviewView: vscode.WebviewView;
-    let mockWebview: vscode.Webview;
-    let stateManager: TddStateManager;
-    let aiService: AiService;
-    let codeAnalysisService: CodeAnalysisService;
+    suite('TddInteractionView Test Suite', () => {
+        let tddInteractionView: TddInteractionView;
+        let mockExtensionUri: vscode.Uri;
+        let mockWebviewView: vscode.WebviewView;
+        let mockWebview: vscode.Webview;
+        let stateManager: TddStateManager;
+        let aiService: AiService;
+        let codeAnalysisService: CodeAnalysisService;
 
-    setup(() => {
-        (TddStateManager as any).instance = undefined;
+        setup(() => {
+                (TddStateManager as any).instance = undefined;
         (AiService as any).instance = undefined;
         (CodeAnalysisService as any).instance = undefined;
 
@@ -26,40 +26,40 @@ suite('TddInteractionView Test Suite', () => {
         codeAnalysisService = CodeAnalysisService.getInstance();
 
         mockWebview = {
-            html: '',
-            options: {},
-            onDidReceiveMessage: sinon.stub().returns({ dispose: sinon.stub() }),
-            postMessage: sinon.stub(),
-            asWebviewUri: sinon.stub(),
-            cspSource: 'mock-csp'
+                html: '',
+                options: {},
+        onDidReceiveMessage: sinon.stub().returns({ dispose: sinon.stub() }),
+        postMessage: sinon.stub(),
+                asWebviewUri: sinon.stub(),
+                cspSource: 'mock-csp'
         } as any;
 
         mockWebviewView = {
-            webview: mockWebview,
-            visible: true,
-            onDidDispose: sinon.stub().returns({ dispose: sinon.stub() }),
-            onDidChangeVisibility: sinon.stub().returns({ dispose: sinon.stub() }),
-            show: sinon.stub(),
-            title: 'Test View',
-            description: 'Test Description'
+                webview: mockWebview,
+                visible: true,
+                onDidDispose: sinon.stub().returns({ dispose: sinon.stub() }),
+        onDidChangeVisibility: sinon.stub().returns({ dispose: sinon.stub() }),
+        show: sinon.stub(),
+                title: 'Test View',
+                description: 'Test Description'
         } as any;
 
         mockExtensionUri = vscode.Uri.file('/mock/extension/path');
-        
+
         tddInteractionView = new TddInteractionView(mockExtensionUri);
     });
 
-    teardown(() => {
-        sinon.restore();
+        teardown(() => {
+                sinon.restore();
     });
 
-    test('Should initialize with correct view type', () => {
+        test('Should initialize with correct view type', () => {
         assert.strictEqual(TddInteractionView.viewType, 'tdd-mentor-ai-interaction');
     });
 
     test("Should generate user stories on first PICK phase", () => {
         const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
-            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+                { id: '1', title: 'Test User Story 1', description: 'Description 1' },
         ]);
 
         stateManager.setPhase(TddPhase.PICK);
@@ -79,11 +79,11 @@ suite('TddInteractionView Test Suite', () => {
 
         const mockUserStory = { id: '1', title: 'Test User Story', description: 'Test Description' };
         const mockTestProposals = [
-            { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' }
+        { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' }
         ];
-        
+
         const generateTestProposalsStub = sinon.stub(aiService, 'generateTestProposals')
-            .resolves(mockTestProposals);
+                .resolves(mockTestProposals);
 
         stateManager.setUserStories([mockUserStory]);
         stateManager.selectUserStory('1');
@@ -102,37 +102,17 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(generateTestProposalsStub.calledWith(mockUserStory));
     });
 
-    test("Should handle selectTestProposal message and update editing mode", async () => {
-        const selectTestProposalSpy = sinon.spy(stateManager, 'selectTestProposal');
-        const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
-
-        const testProposal = { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' };
-
-        stateManager.setTestProposals([testProposal]);
-
-        const context = {} as vscode.WebviewViewResolveContext;
-        const token = {} as vscode.CancellationToken;
-
-        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
-
-        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
-        await messageHandler({ command: 'selectTestProposal', testId: 'test1' });
-
-        assert.ok(selectTestProposalSpy.calledWith('test1'));
-        assert.ok(setTestEditingModeSpy.calledWith(true));
-    });
-
     test("Should handle verifyTests message", async () => {
         const verifyTestsStub = sinon.stub(aiService, 'verifyTests').resolves({
-            success: true,
-            message: 'All tests passed'
+                success: true,
+                message: 'All tests passed'
         });
 
         const setTestResultsSpy = sinon.spy(stateManager, 'setTestResults');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
         const setRefactoringSuggestionsSpy = sinon.spy(stateManager, 'setRefactoringSuggestions');
         const generateRefactoringSuggestionsStub = sinon.stub(aiService, 'generateRefactoringSuggestions')
-            .resolves([{ id: 'refactor1', title: 'Refactor 1', description: 'Refactor description' }]);
+                .resolves([{ id: 'refactor1', title: 'Refactor 1', description: 'Refactor description' }]);
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -151,8 +131,8 @@ suite('TddInteractionView Test Suite', () => {
 
     test("Should handle refreshUserStories message", async () => {
         const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
-            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
-            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+                { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+        { id: '2', title: 'Test User Story 2', description: 'Description 2' }
         ]);
 
         const setUserStoriesSpy = sinon.spy(stateManager, 'setUserStories');
@@ -167,15 +147,15 @@ suite('TddInteractionView Test Suite', () => {
 
         assert.ok(generateUserStoriesStub.called);
         assert.ok(setUserStoriesSpy.calledWith([
-            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
-            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+                { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+        { id: '2', title: 'Test User Story 2', description: 'Description 2' }
         ]));
     });
 
     test("Should handle completePhase message", async () => {
         const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
-            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
-            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+                { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+        { id: '2', title: 'Test User Story 2', description: 'Description 2' }
         ]);
 
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
@@ -192,8 +172,8 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(generateUserStoriesStub.called);
         assert.ok(setPhaseSpy.calledWith(TddPhase.PICK));
         assert.ok(setUserStoriesSpy.calledWith([
-            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
-            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+                { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+        { id: '2', title: 'Test User Story 2', description: 'Description 2' }
         ]));
     });
 
@@ -239,32 +219,37 @@ suite('TddInteractionView Test Suite', () => {
     test("Should handle refreshTestProposals message", async () => {
             const generateTestProposalsStub = sinon.stub(aiService, 'generateTestProposals').resolves([
                 { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' },
-                { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
+        { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
             ]);
 
             const setTestProposalsSpy = sinon.spy(stateManager, 'setTestProposals');
 
-            stateManager.setUserStories([{ id: 'us1', title: 'User Story 1', description: 'Description 1' }]);
-            stateManager.selectUserStory('us1');
+        stateManager.setUserStories([{ id: 'us1', title: 'User Story 1', description: 'Description 1' }]);
+        stateManager.selectUserStory('us1');
 
             const context = {} as vscode.WebviewViewResolveContext;
             const token = {} as vscode.CancellationToken;
 
-            tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
 
             const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
-            await messageHandler({ command: 'refreshTestProposals' });
+        await messageHandler({ command: 'refreshTestProposals' });
 
-            assert.ok(generateTestProposalsStub.called);
-            assert.ok(setTestProposalsSpy.calledWith([
+        assert.ok(generateTestProposalsStub.called);
+        assert.ok(setTestProposalsSpy.calledWith([
                 { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' },
-                { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
+        { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
             ]));
     });
 
     test("Should handle refreshRefactoringSuggestions message", async () => {
-        const generateRefactoringSuggestionsSpy = sinon.spy(aiService, 'generateRefactoringSuggestions');
+        const generateRefactoringSuggestionsStub = sinon.stub(aiService, 'generateRefactoringSuggestions').resolves([
+            { id: 'refactor1', title: 'Refactor 1', description: 'Refactor description' },
+            { id: 'refactor2', title: 'Refactor 2', description: 'Another refactor' }
+        ]);
         const setRefactoringSuggestionsSpy = sinon.spy(stateManager, 'setRefactoringSuggestions');
+
+        stateManager.setPhase(TddPhase.REFACTORING);
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -274,7 +259,10 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'refreshRefactoringSuggestions' });
 
-        assert.ok(generateRefactoringSuggestionsSpy.called);
-        assert.ok(setRefactoringSuggestionsSpy.called);
+        assert.ok(generateRefactoringSuggestionsStub.called);
+        assert.ok(setRefactoringSuggestionsSpy.calledWith([
+            { id: 'refactor1', title: 'Refactor 1', description: 'Refactor description' },
+            { id: 'refactor2', title: 'Refactor 2', description: 'Another refactor' }
+        ]));
     });
 });

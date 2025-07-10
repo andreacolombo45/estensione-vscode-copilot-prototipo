@@ -1,12 +1,146 @@
 import * as assert from 'assert';
+import * as sinon from 'sinon';
+import * as vscode from 'vscode';
 import { AiService } from '../services/ai-service';
+import { CodeAnalysisService } from '../services/code-analysis-service';
+import { AiClient } from '../services/ai-client';
+import { UserStory } from '../models/tdd-models';
 
 suite('AiService Test Suite', () => {
     let aiService: AiService;
+    let sendRequestStub: sinon.SinonStub;
+    let getProjectStructureStub: sinon.SinonStub;
+    let getCommitHistoryStub: sinon.SinonStub;
+    let workspaceConfigStub: sinon.SinonStub;
+
+    const mockUserStories = [
+        {
+            id: 'us1',
+            title: 'Gestire l\'autenticazione degli utenti',
+            description: 'Come utente, voglio poter registrarmi e accedere al sistema con le mie credenziali.'
+        },
+        {
+            id: 'us2',
+            title: 'Aggiungere elementi alla lista',
+            description: 'Come utente, voglio poter aggiungere nuovi elementi alla mia lista.'
+        },
+        {
+            id: 'us3',
+            title: 'Filtrare gli elementi per stato',
+            description: 'Come utente, voglio poter filtrare gli elementi della lista per stato.'
+        }
+    ];
+
+    const mockTestProposals = [
+        {
+            id: 'test1',
+            title: 'Test di registrazione utente',
+            description: 'Verifica che un nuovo utente possa registrarsi con email e password valide',
+            code: 'test code 1',
+            targetFile: 'auth.test.js'
+        },
+        {
+            id: 'test2',
+            title: 'Test di login utente',
+            description: 'Verifica che un utente possa accedere con credenziali corrette',
+            code: 'test code 2',
+            targetFile: 'auth.test.js'
+        },
+        {
+            id: 'test3',
+            title: 'Test di login fallito',
+            description: 'Verifica che il login fallisca con credenziali errate',
+            code: 'test code 3',
+            targetFile: 'auth.test.js'
+        }
+    ];
+
+    const mockTestProposals2 = [
+        {
+            id: 'test4',
+            title: 'Test aggiunta elemento',
+            description: 'Verifica che un elemento possa essere aggiunto alla lista',
+            code: 'test code 4',
+            targetFile: 'list.test.js'
+        },
+        {
+            id: 'test5',
+            title: 'Test rimozione elemento',
+            description: 'Verifica che un elemento possa essere rimosso dalla lista',
+            code: 'test code 5',
+            targetFile: 'list.test.js'
+        },
+        {
+            id: 'test6',
+            title: 'Test elemento duplicato',
+            description: 'Verifica che non si possano aggiungere elementi duplicati',
+            code: 'test code 6',
+            targetFile: 'list.test.js'
+        }
+    ];
+
+    const mockRefactoringSuggestions = [
+        {
+            id: 'refactor1',
+            title: 'Estrai metodo comune',
+            description: 'Il codice contiene logica duplicata nelle funzioni processData e validateData.'
+        },
+        {
+            id: 'refactor2',
+            title: 'Utilizza pattern factory',
+            description: 'La creazione degli oggetti utente è sparsa in diverse parti del codice.'
+        },
+        {
+            id: 'refactor3',
+            title: 'Migliora la gestione degli errori',
+            description: 'Attualmente gli errori vengono gestiti in modo incoerente.'
+        }
+    ];
 
     setup(() => {
         (AiService as any).instance = undefined;
+
+        workspaceConfigStub = sinon.stub(vscode.workspace, 'getConfiguration').returns({
+            get: sinon.stub().returns('test-api-key')
+        } as any);
+
+        sendRequestStub = sinon.stub(AiClient.prototype, 'sendRequest');
+        
+        sendRequestStub.withArgs(
+            sinon.match.string,
+            sinon.match.has('systemPrompt', sinon.match(/user stor/i))
+        ).resolves({ items: mockUserStories });
+        
+        sendRequestStub.withArgs(
+            sinon.match.string,
+            sinon.match(obj => obj.context && obj.context.userStory && obj.context.userStory.id === 'us1')
+        ).resolves({ items: mockTestProposals });
+        
+        sendRequestStub.withArgs(
+            sinon.match.string,
+            sinon.match(obj => obj.context && obj.context.userStory && obj.context.userStory.id === 'us2')
+        ).resolves({ items: mockTestProposals2 });
+        
+        sendRequestStub.withArgs(
+            sinon.match.string,
+            sinon.match.has('systemPrompt', sinon.match(/refactoring/i))
+        ).resolves({ items: mockRefactoringSuggestions });
+        
+        sendRequestStub.resolves({ items: [] });
+
+        const getProjectStructureStub = sinon.stub().resolves({ files: [], folders: [] });
+        const getCommitHistoryStub = sinon.stub().resolves({ commits: [] });
+
+        sinon.stub(CodeAnalysisService, 'getInstance').returns({
+            getProjectStructure: getProjectStructureStub,
+            getCommitHistory: getCommitHistoryStub
+        } as any);
+
         aiService = AiService.getInstance();
+    });
+
+    teardown(() => {
+        sinon.restore();
     });
 
     test('Should return singleton instance', () => {
@@ -17,6 +151,7 @@ suite('AiService Test Suite', () => {
 
     test('Should generate user stories', async () => {
         const userStories = await aiService.generateUserStories();
+
         assert.ok(Array.isArray(userStories));
         assert.ok(userStories.length > 0);
 
@@ -28,6 +163,8 @@ suite('AiService Test Suite', () => {
             assert.strictEqual(typeof story.title, 'string');
             assert.strictEqual(typeof story.description, 'string');
         });
+
+        assert.deepStrictEqual(userStories, mockUserStories);
     });
 
     test('Should generate test proposals for user story', async () => {
@@ -50,7 +187,10 @@ suite('AiService Test Suite', () => {
             assert.strictEqual(typeof proposal.id, 'string');
             assert.strictEqual(typeof proposal.title, 'string');
             assert.strictEqual(typeof proposal.description, 'string');
-            assert.strictEqual(typeof proposal.code, 'string');         });
+            assert.strictEqual(typeof proposal.code, 'string');
+        });
+
+        assert.deepStrictEqual(testProposals, mockTestProposals);
     });
 
     test("Should generate different test proposals for different user stories", async () => {
@@ -65,11 +205,13 @@ suite('AiService Test Suite', () => {
             title: 'User Story 2',
             description: 'Description for User Story 2'
         };
-
+        
         const proposals1 = await aiService.generateTestProposals(userStory1);
         const proposals2 = await aiService.generateTestProposals(userStory2);
 
         assert.notDeepStrictEqual(proposals1, proposals2);
+        assert.deepStrictEqual(proposals1, mockTestProposals);
+        assert.deepStrictEqual(proposals2, mockTestProposals2);
     });
 
     test("Should generate refactoring suggestions", async () => {
@@ -86,6 +228,8 @@ suite('AiService Test Suite', () => {
             assert.strictEqual(typeof suggestion.title, 'string');
             assert.strictEqual(typeof suggestion.description, 'string');
         }); 
+
+        assert.deepStrictEqual(suggestions, mockRefactoringSuggestions);
     });
 
     test("Should verify tests and return results", async () => {
@@ -95,5 +239,16 @@ suite('AiService Test Suite', () => {
         assert.strictEqual(typeof testResults.success, 'boolean');
         assert.strictEqual(typeof testResults.message, 'string');
         assert.ok(testResults.message.length > 0);
+    });
+
+    test("Should call correct methods when generating user stories", async () => {
+        const generateTenItemsStub = sinon.stub(aiService as any, "generateTenItems").returns(Promise.resolve(mockUserStories));
+        const selectThreeItemsStub = sinon.stub(aiService as any, "selectThreeItems").returns(Promise.resolve(mockUserStories));
+
+        const userStories = await aiService.generateUserStories();
+
+        assert.ok(generateTenItemsStub.calledOnce);
+        assert.ok(selectThreeItemsStub.calledOnce);
+        assert.deepStrictEqual(userStories, mockUserStories);
     });
 });
