@@ -1,10 +1,22 @@
 import * as vscode from 'vscode';
 import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
+import { AiClient } from './ai-client';
+import { CodeAnalysisService } from './code-analysis-service';
+import { aiConfigs } from '../models/tdd-prompts';
+
+type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion;
 
 export class AiService {
     private static instance: AiService;
+    private aiClient: AiClient;
+    private codeAnalysisService: CodeAnalysisService;
+    private readonly configs: typeof aiConfigs;
 
-    private constructor() {
+    private constructor(aiClient?: AiClient, codeAnalysisService?: CodeAnalysisService) {
+        const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+        this.aiClient = aiClient || new AiClient(apikey);
+        this.codeAnalysisService = codeAnalysisService || CodeAnalysisService.getInstance();
+        this.configs = aiConfigs;
     }
 
     public static getInstance(): AiService {
@@ -14,169 +26,119 @@ export class AiService {
         return AiService.instance;
     }
 
+    private async generateTenItems<T extends AiGeneratedItem>(
+        type: 'userStories' | 'testProposals' | 'refactoringSuggestions',
+        context: any = {}
+    ): Promise<T[]> {
+        try {
+            const config = this.configs[type];
+            let userPrompt = config.userPrompt;
+
+            const projectContext = await this.getProjectContext();
+
+            const response = await this.aiClient.sendRequest<{ items: T[] }>(
+                userPrompt, 
+                {
+                systemPrompt: config.systemPrompt,
+                model: config.modelOptions?.model,
+                maxTokens: config.modelOptions?.maxTokens,
+                temperature: config.modelOptions?.temperature,
+                context: { ...projectContext, ...context }
+            });
+
+            if (response && Array.isArray(response.items)) {
+                return response.items;
+            } else {
+                throw new Error('Response format is invalid.');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Errore with the generation of ${type}: ${error}`);
+            return [];
+        }
+    }
+
+    private async selectThreeItems<T extends AiGeneratedItem>(
+        type: 'userStories' | 'testProposals' | 'refactoringSuggestions',
+        items: T[],
+        context: any = {}
+    ): Promise<T[]> {
+        if (items.length <= 3) {
+            return items;
+        }
+
+        try {
+            const config = this.configs[type];
+            const selectionPrompt = config.selectionPrompt;
+
+            const response = await this.aiClient.sendRequest<{ items: T[] }>(
+                selectionPrompt,
+                {
+                    systemPrompt: '',
+                    model: config.modelOptions?.model,
+                    temperature: 0.3,
+                    context: {
+                        ...context,
+                        items
+                    }
+                }
+            );
+
+            if (response && Array.isArray(response.items)) {
+                return response.items.slice(0, 3);
+            } else {
+                throw new Error('Ai Response is invalid.');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error with the selection of ${type}: ${error}`);
+            return items.slice(0, 3);
+        }
+    }
+
+    private async getProjectContext(): Promise<any> {
+        try {
+            const projectStructure = await this.codeAnalysisService.getProjectStructure();
+            const commitHistory = await this.codeAnalysisService.getCommitHistory();
+
+            return {
+                projectStructure,
+                commitHistory
+            };
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error during workspace analysis: ${error}`);
+            return {};
+        }
+    }
+
     public async generateUserStories(): Promise<UserStory[]> {
         try {
-            return [
-                {
-                    id: 'us1',
-                    title: 'Gestire l\'autenticazione degli utenti',
-                    description: 'Come utente, voglio poter registrarmi e accedere al sistema con le mie credenziali per gestire il mio profilo personale.'
-                },
-                {
-                    id: 'us2',
-                    title: 'Aggiungere elementi alla lista',
-                    description: 'Come utente, voglio poter aggiungere nuovi elementi alla mia lista per tenere traccia delle attività da svolgere.'
-                },
-                {
-                    id: 'us3',
-                    title: 'Filtrare gli elementi per stato',
-                    description: 'Come utente, voglio poter filtrare gli elementi della lista per stato (completati, da fare) per concentrarmi su ciò che è rilevante.'
-                }
-            ];
+            const tenUserStories = await this.generateTenItems<UserStory>('userStories');
+
+            return await this.selectThreeItems<UserStory>('userStories', tenUserStories);
         } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante la generazione delle user stories: ${error}`);
+            vscode.window.showErrorMessage(`Error during user story generation: ${error}`);
             return [];
         }
     }
 
     public async generateTestProposals(userStory: UserStory): Promise<TestProposal[]> {
         try {
-            if (userStory.id === 'us1') {
-                return [
-                    {
-                        id: 'test1',
-                        title: 'Test di registrazione utente',
-                        description: 'Verifica che un nuovo utente possa registrarsi con email e password valide',
-                        code: `
-test('should register a new user with valid credentials', async () => {
-    const email = 'test@example.com';
-    const password = 'Password123!';
-    
-    const result = await userService.register(email, password);
-    
-    expect(result.success).toBe(true);
-    expect(result.user).toBeDefined();
-    expect(result.user.email).toBe(email);
-});`,
-                        targetFile: 'auth.test.js'
-                    },
-                    {
-                        id: 'test2',
-                        title: 'Test di login utente',
-                        description: 'Verifica che un utente possa accedere con credenziali corrette',
-                        code: `
-test('should login user with correct credentials', async () => {
-    const email = 'existing@example.com';
-    const password = 'Password123!';
-    
-    const result = await userService.login(email, password);
-    
-    expect(result.success).toBe(true);
-    expect(result.token).toBeDefined();
-});`,
-                        targetFile: 'auth.test.js'
-                    },
-                    {
-                        id: 'test3',
-                        title: 'Test di login fallito',
-                        description: 'Verifica che il login fallisca con credenziali errate',
-                        code: `
-test('should fail login with incorrect credentials', async () => {
-    const email = 'existing@example.com';
-    const password = 'WrongPassword123!';
-    
-    const result = await userService.login(email, password);
-    
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('Invalid credentials');
-});`,
-                        targetFile: 'auth.test.js'
-                    }
-                ];
-            } else {
-                return [
-                    {
-                        id: 'test1',
-                        title: `Test per la user story: ${userStory.title}`,
-                        description: `Verifica funzionalità principale per: ${userStory.title}`,
-                        code: `
-test('should implement main functionality', () => {
-    // Arrange
-    const input = 'example input';
-    
-    // Act
-    const result = someFunction(input);
-    
-    // Assert
-    expect(result).toBeDefined();
-});`,
-                        targetFile: 'feature.test.js'
-                    },
-                    {
-                        id: 'test2',
-                        title: `Test caso limite per: ${userStory.title}`,
-                        description: `Verifica comportamento in caso limite per: ${userStory.title}`,
-                        code: `
-test('should handle edge case correctly', () => {
-    // Arrange
-    const input = null;
-    
-    // Act
-    const result = someFunction(input);
-    
-    // Assert
-    expect(result).toBeNull();
-});`,
-                        targetFile: 'feature.test.js'
-                    },
-                    {
-                        id: 'test3',
-                        title: `Test errore per: ${userStory.title}`,
-                        description: `Verifica gestione degli errori per: ${userStory.title}`,
-                        code: `
-test('should throw error for invalid input', () => {
-    // Arrange
-    const invalidInput = -1;
-    
-    // Act & Assert
-    expect(() => {
-        someFunction(invalidInput);
-    }).toThrow('Invalid input');
-});`,
-                        targetFile: 'feature.test.js'
-                    }
-                ];
-            }
+            const tenTestProposals = await this.generateTenItems<TestProposal>('testProposals', { userStory });
+            
+            return await this.selectThreeItems<TestProposal>('testProposals', tenTestProposals, { userStory });
         } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante la generazione dei test proposti: ${error}`);
+            vscode.window.showErrorMessage(`Error during the generation of test proposals: ${error}`);
             return [];
         }
     }
 
     public async generateRefactoringSuggestions(): Promise<RefactoringSuggestion[]> {
         try {
-            return [
-                {
-                    id: 'refactor1',
-                    title: 'Estrai metodo comune',
-                    description: 'Il codice contiene logica duplicata nelle funzioni processData e validateData. ' +
-                        'Considera di estrarre la logica comune in un metodo separato per migliorare la manutenibilità.'
-                },
-                {
-                    id: 'refactor2',
-                    title: 'Utilizza pattern factory',
-                    description: 'La creazione degli oggetti utente è sparsa in diverse parti del codice. ' + 
-                        'Considera l\'implementazione del pattern Factory per centralizzare la creazione degli oggetti.'
-                },
-                {
-                    id: 'refactor3',
-                    title: 'Migliora la gestione degli errori',
-                    description: 'Attualmente gli errori vengono gestiti in modo incoerente. ' +
-                        'Considera l\'implementazione di un sistema di gestione degli errori coerente utilizzando try/catch o un meccanismo centralizzato.'
-                }
-            ];
+            /*const implementedCode = await this.codeAnalysisService.getImplementedCode();*/
+            const tenRefactoringSuggestions = await this.generateTenItems<RefactoringSuggestion>('refactoringSuggestions' /*,{ implementedCode }*/);
+
+            return await this.selectThreeItems<RefactoringSuggestion>('refactoringSuggestions', tenRefactoringSuggestions);
         } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante la generazione dei suggerimenti di refactoring: ${error}`);
+            vscode.window.showErrorMessage(`Error during the generation of refactoring suggestions: ${error}`);
             return [];
         }
     }

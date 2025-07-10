@@ -189,4 +189,12 @@ export class CodeAnalysisService {
         
         return results;
     }
+
+    public async getProjectStructure(): Promise<string[]> {
+        return [];
+    }
+
+    public async getCommitHistory(): Promise<string[]> {
+        return [];
+    }
 }
