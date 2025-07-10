@@ -268,4 +268,15 @@ suite('AiService Test Suite', () => {
         assert.ok(selectThreeItemsStub.calledOnce);
         assert.deepStrictEqual(testProposals, mockTestProposals);
     });
+
+    test("Should call correct methods when generating refactoring suggestions", async () => {
+        const generateTenItemsStub = sinon.stub(aiService as any, "generateTenItems").returns(Promise.resolve(mockRefactoringSuggestions));
+        const selectThreeItemsStub = sinon.stub(aiService as any, "selectThreeItems").returns(Promise.resolve(mockRefactoringSuggestions));
+
+        const suggestions = await aiService.generateRefactoringSuggestions();
+
+        assert.ok(generateTenItemsStub.calledOnce);
+        assert.ok(selectThreeItemsStub.calledOnce);
+        assert.deepStrictEqual(suggestions, mockRefactoringSuggestions);
+    });
 });
