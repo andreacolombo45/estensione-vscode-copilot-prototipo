@@ -39,4 +39,32 @@ export class GitService {
             return null;
         }
     }
+
+    public async getRecentCommits(limit: number = 10): Promise<CommitInfo[]> {
+        const logCmd = `git log -${limit} --pretty=format:"%H|%an|%at|%s"`;
+        const { stdout } = await this.execFn(logCmd, { cwd: this.workspacePath });
+
+        const lines = stdout.trim().split('\n');
+        const commits: CommitInfo[] = [];
+
+        for (const line of lines) {
+            const [hash, author, timestamp, subject] = line.split('|');
+            const files = await this.getFilesChangedInCommit(hash);
+            commits.push({
+                hash,
+                author,
+                date: new Date(parseInt(timestamp) * 1000), 
+                message: subject,
+                filesChanged: files
+            });
+        }
+
+        return commits;
+    }
+
+    private async getFilesChangedInCommit(hash: string): Promise<string[]> {
+        const showCmd = `git show --pretty="" --name-only ${hash}`;
+        const { stdout } = await this.execFn(showCmd, { cwd: this.workspacePath });
+        return stdout.trim().split('\n').filter(f => f.length > 0);
+    }
 }

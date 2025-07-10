@@ -46,4 +46,40 @@ suite('GitService Test Suite', () => {
         assert.strictEqual(gitService, null);
         sinon.assert.calledWith(showErrorMessageStub, 'No workspace folder is open.');
     });
+
+    test('Should return parsed commits', async () => {
+        const execStub = sinon.stub();
+        execStub.onCall(0).resolves({ stdout: 'true' });
+
+        execStub.onCall(1).resolves({
+            stdout: `abc123|Andrea|1625079600|Fix bug\nxyz789|Bob|1625079601|Add feature`
+        });
+
+        execStub.onCall(2).resolves({ stdout: 'src/file1.ts\nsrc/file2.ts\n' });
+        execStub.onCall(3).resolves({ stdout: 'test/test1.spec.ts\n' });
+
+        const gitService = await GitService.create(execStub);
+
+        assert.ok(gitService instanceof GitService);
+        const commits = await gitService.getRecentCommits(2);
+
+        assert.strictEqual(commits.length, 2);
+
+        assert.deepStrictEqual(commits[0], {
+            hash: 'abc123',
+            author: 'Andrea',
+            date: new Date(1625079600 * 1000),
+            message: 'Fix bug',
+            filesChanged: ['src/file1.ts', 'src/file2.ts']
+        });
+
+        assert.deepStrictEqual(commits[1], {
+            hash: 'xyz789',
+            author: 'Bob',
+            date: new Date(1625079601 * 1000),
+            message: 'Add feature',
+            filesChanged: ['test/test1.spec.ts']
+        });
+
+    });
 });

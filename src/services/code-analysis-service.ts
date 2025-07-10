@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { CommitInfo } from './git-service';
 
 export class CodeAnalysisService {
     private static instance: CodeAnalysisService;
@@ -194,7 +195,7 @@ export class CodeAnalysisService {
         return [];
     }
 
-    public async getCommitHistory(): Promise<string[]> {
+    public async getCommitHistory(limit: number = 10): Promise<CommitInfo[]> {
         return [];
     }
 }
