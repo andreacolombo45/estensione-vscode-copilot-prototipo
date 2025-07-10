@@ -160,6 +160,7 @@ export class AiService {
     public async generateTestProposals(userStory: UserStory): Promise<TestProposal[]> {
         try {
             const tenTestProposals = await this.generateTenItems<TestProposal>('testProposals', { userStory });
+            
             return await this.selectThreeItems<TestProposal>('testProposals', tenTestProposals, { userStory });
         } catch (error) {
             vscode.window.showErrorMessage(`Error during the generation of test proposals: ${error}`);
