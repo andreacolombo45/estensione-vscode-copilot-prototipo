@@ -169,7 +169,6 @@ export class AiService {
 
     public async generateRefactoringSuggestions(): Promise<RefactoringSuggestion[]> {
         try {
-            console.log('Generating refactoring suggestions...');
             /*const implementedCode = await this.codeAnalysisService.getImplementedCode();*/
             const tenRefactoringSuggestions = await this.generateTenItems<RefactoringSuggestion>('refactoringSuggestions' /*,{ implementedCode }*/);
 
