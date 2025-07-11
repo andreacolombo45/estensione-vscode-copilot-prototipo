@@ -4,6 +4,7 @@ import * as sinon from 'sinon';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
 import * as fs from 'fs';
+import * as path from 'path';
 
 suite('CodeAnalysisService Test Suite', () => {
     let codeAnalysisService: CodeAnalysisService;
@@ -144,4 +145,33 @@ suite('CodeAnalysisService Test Suite', () => {
             sinon.match((value: string | string[]) => value.includes('existing content') && value.includes(testCode))
         ));
     });
+
+    test('Should create new test file if it does not exist', async () => {
+        const mockFsPath = '/mock/workspace';
+        const testFilePath = path.join(mockFsPath, 'tests', 'new.test.js');
+        const testCode = 'testCode';
+
+        sinon.stub(vscode.workspace, 'workspaceFolders').value([
+            { uri: { fsPath: mockFsPath } }
+        ]);
+
+        sinon.stub(codeAnalysisService as any, 'getAllFiles').resolves([]);
+
+        const mkdirStub = sinon.stub(fs.promises, 'mkdir').resolves();
+        const writeFileStub = sinon.stub(fs.promises, 'writeFile').resolves();
+        sinon.stub(fs.promises, 'readFile').resolves('');
+
+        sinon.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
+        sinon.stub(vscode.window, 'showTextDocument').resolves();
+
+        const success = await codeAnalysisService.insertTestCode(testCode, 'new.test.js');
+
+        assert.strictEqual(success, true);
+        assert.ok(mkdirStub.called);
+        assert.ok(writeFileStub.calledWith(
+            testFilePath,
+            sinon.match((value: string | string[]) => value.includes(testCode))
+        ));
+    });
+
 });
