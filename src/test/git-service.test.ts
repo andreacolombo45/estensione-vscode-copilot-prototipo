@@ -80,6 +80,23 @@ suite('GitService Test Suite', () => {
             message: 'Add feature',
             filesChanged: ['test/test1.spec.ts']
         });
+    });
 
+    test('Should show commit details', async () => {
+        const execStub = sinon.stub();
+        const expectedOutput = `commit abc123\nAuthor: Andrea \nDate:   Fri Jul 30 12:00:00 2021 +0200\n\n    Fix bug\n\n+added line 1\n+added line 2`;
+
+        execStub.onCall(0).resolves({ stdout: 'true' });
+
+        execStub.onCall(1).resolves({
+            stdout: expectedOutput
+        });
+
+        const gitService = await GitService.create(execStub);
+        assert.ok(gitService instanceof GitService);
+
+        const output = await gitService.showCommitDetails(['abc123']);
+        assert.strictEqual(output, expectedOutput);
+        assert.ok(execStub.calledWith('git show abc123', sinon.match.has('cwd', gitService['workspacePath'])));
     });
 });

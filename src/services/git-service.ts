@@ -67,4 +67,9 @@ export class GitService {
         const { stdout } = await this.execFn(showCmd, { cwd: this.workspacePath });
         return stdout.trim().split('\n').filter(f => f.length > 0);
     }
+
+    public async showCommitDetails(args: string[]): Promise<string> {
+        const { stdout } = await this.execFn(`git show ${args.join(' ')}`, { cwd: this.workspacePath });
+        return stdout;
+    }
 }
