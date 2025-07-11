@@ -1,17 +1,16 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { CommitInfo } from './git-service';
+import { CommitInfo, GitService } from './git-service';
 
 export class CodeAnalysisService {
     private static instance: CodeAnalysisService;
 
-    private constructor() {
-    }
+    private constructor(private gitService: GitService) {}
 
-    public static getInstance(): CodeAnalysisService {
+    public static getInstance(gitService: GitService): CodeAnalysisService {
         if (!CodeAnalysisService.instance) {
-            CodeAnalysisService.instance = new CodeAnalysisService();
+            CodeAnalysisService.instance = new CodeAnalysisService(gitService);
         }
         return CodeAnalysisService.instance;
     }
@@ -196,6 +195,6 @@ export class CodeAnalysisService {
     }
 
     public async getCommitHistory(limit: number = 10): Promise<CommitInfo[]> {
-        return [];
+        return await this.gitService.getRecentCommits(limit);
     }
 }

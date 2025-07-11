@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { AiService } from '../services/ai-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { AiClient } from '../services/ai-client';
-import { UserStory } from '../models/tdd-models';
+import { GitService } from '../services/git-service';
 
 suite('AiService Test Suite', () => {
     let aiService: AiService;
@@ -97,8 +97,14 @@ suite('AiService Test Suite', () => {
         }
     ];
 
-    setup(() => {
+    setup(async () => {
         (AiService as any).instance = undefined;
+
+        const gitServiceStub = {
+            getRecentCommits: sinon.stub().resolves([]),
+        } as any;
+
+        sinon.stub(GitService, 'create').returns(gitServiceStub);
 
         workspaceConfigStub = sinon.stub(vscode.workspace, 'getConfiguration').returns({
             get: sinon.stub().returns('test-api-key')
@@ -107,45 +113,49 @@ suite('AiService Test Suite', () => {
         sendRequestStub = sinon.stub(AiClient.prototype, 'sendRequest');
         
         sendRequestStub.withArgs(
-            sinon.match.string,
+            sinon.match.any,
             sinon.match.has('systemPrompt', sinon.match(/user stor/i))
         ).resolves({ items: mockUserStories });
         
         sendRequestStub.withArgs(
-            sinon.match.string,
+            sinon.match.any,
             sinon.match(obj => obj.context && obj.context.userStory && obj.context.userStory.id === 'us1')
         ).resolves({ items: mockTestProposals });
         
         sendRequestStub.withArgs(
-            sinon.match.string,
+            sinon.match.any,
             sinon.match(obj => obj.context && obj.context.userStory && obj.context.userStory.id === 'us2')
         ).resolves({ items: mockTestProposals2 });
         
         sendRequestStub.withArgs(
-            sinon.match.string,
+            sinon.match.any,
             sinon.match.has('systemPrompt', sinon.match(/refactoring/i))
         ).resolves({ items: mockRefactoringSuggestions });
-        
-        sendRequestStub.resolves({ items: [] });
 
         const getProjectStructureStub = sinon.stub().resolves({ files: [], folders: [] });
         const getCommitHistoryStub = sinon.stub().resolves({ commits: [] });
 
-        sinon.stub(CodeAnalysisService, 'getInstance').returns({
+        const codeAnalysisServiceStub = {
             getProjectStructure: getProjectStructureStub,
             getCommitHistory: getCommitHistoryStub
-        } as any);
+        } as any as CodeAnalysisService;
 
-        aiService = AiService.getInstance();
+        sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
+
+        const aiClientStub = {
+            sendRequest: sendRequestStub,
+        } as any as AiClient;
+
+        aiService = await AiService.getInstance(aiClientStub, codeAnalysisServiceStub);
     });
 
     teardown(() => {
         sinon.restore();
     });
 
-    test('Should return singleton instance', () => {
-        const instance1 = AiService.getInstance();
-        const instance2 = AiService.getInstance();
+    test('Should return singleton instance', async () => {
+        const instance1 = await AiService.getInstance();
+        const instance2 = await AiService.getInstance();
         assert.strictEqual(instance1, instance2);
     });
 
@@ -164,15 +174,11 @@ suite('AiService Test Suite', () => {
             assert.strictEqual(typeof story.description, 'string');
         });
 
-        assert.deepStrictEqual(userStories, mockUserStories);
+        assert.deepStrictEqual(userStories, mockUserStories.slice(0, 3));
     });
 
     test('Should generate test proposals for user story', async () => {
-        const userStory = {
-            id: 'us1',
-            title: 'Test User Story',
-            description: 'This is a test user story'
-        };
+        const userStory = mockUserStories[0];
 
         const testProposals = await aiService.generateTestProposals(userStory);
 

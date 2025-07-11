@@ -3,25 +3,28 @@ import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-mo
 import { AiClient } from './ai-client';
 import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
+import { GitService } from './git-service';
 
 type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion;
 
 export class AiService {
     private static instance: AiService;
-    private aiClient: AiClient;
-    private codeAnalysisService: CodeAnalysisService;
-    private readonly configs: typeof aiConfigs;
 
-    private constructor(aiClient?: AiClient, codeAnalysisService?: CodeAnalysisService) {
-        const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
-        this.aiClient = aiClient || new AiClient(apikey);
-        this.codeAnalysisService = codeAnalysisService || CodeAnalysisService.getInstance();
-        this.configs = aiConfigs;
-    }
+    private constructor(private aiClient: AiClient,
+        private codeAnalysisService: CodeAnalysisService,
+        private readonly configs: typeof aiConfigs
+    ) {}
 
-    public static getInstance(): AiService {
+    public static async getInstance(aiClient?: AiClient, codeAnalysisService?: CodeAnalysisService): Promise<AiService> {
         if (!AiService.instance) {
-            AiService.instance = new AiService();
+            const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+            const finalAiClient = aiClient || new AiClient(apikey);
+            const gitService = await GitService.create();   
+            if (!gitService) {
+                throw new Error('Git service could not be initialized. Please ensure you have a valid Git repository.');
+            }
+            const finalCodeAnalysisService = codeAnalysisService || CodeAnalysisService.getInstance(gitService);
+            AiService.instance = new AiService(finalAiClient, finalCodeAnalysisService, aiConfigs);
         }
         return AiService.instance;
     }

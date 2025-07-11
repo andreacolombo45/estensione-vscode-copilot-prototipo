@@ -2,16 +2,20 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { CodeAnalysisService } from '../services/code-analysis-service';
+import { GitService } from '../services/git-service';
+import { get } from 'http';
 
 suite('CodeAnalysisService Test Suite', () => {
     let codeAnalysisService: CodeAnalysisService;
     let workspaceFoldersStub: sinon.SinonStub;
     let showErrorMessageSpy: sinon.SinonSpy;
+    let gitServiceStub: GitService;
 
     setup(() => {
         (CodeAnalysisService as any).instance = undefined;
-        codeAnalysisService = CodeAnalysisService.getInstance();
-        
+        gitServiceStub = sinon.createStubInstance(GitService);
+        codeAnalysisService = CodeAnalysisService.getInstance(gitServiceStub);
+
         showErrorMessageSpy = sinon.spy(vscode.window, 'showErrorMessage');
     });
 
@@ -20,8 +24,8 @@ suite('CodeAnalysisService Test Suite', () => {
     });
 
     test('Should return singleton instance', () => {
-        const instance1 = CodeAnalysisService.getInstance();
-        const instance2 = CodeAnalysisService.getInstance();
+        const instance1 = CodeAnalysisService.getInstance(gitServiceStub);
+        const instance2 = CodeAnalysisService.getInstance(gitServiceStub);
         assert.strictEqual(instance1, instance2);
     });
 
@@ -71,5 +75,14 @@ suite('CodeAnalysisService Test Suite', () => {
         assert.strictEqual(result.testFiles.length, 0);
         assert.strictEqual(result.sourceFiles.length, 0);
         assert.ok(showErrorMessageSpy.called);
+    });
+
+    test('Should return recent commit history', async () => {
+        const getRecentCommitsStub = gitServiceStub.getRecentCommits as sinon.SinonStub;
+        getRecentCommitsStub.resolves([]);
+
+        const commits = await codeAnalysisService.getCommitHistory(5);
+
+        assert.ok(getRecentCommitsStub.calledOnceWith(5));
     });
 });
