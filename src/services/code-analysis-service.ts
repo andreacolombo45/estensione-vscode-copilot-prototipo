@@ -151,9 +151,10 @@ export class CodeAnalysisService {
             
             let dominantExtension = '';
             let maxCount = 0;
-            
+            const codeExtensions = ['.ts', '.js', '.py', '.java', '.cs', '.go', '.rb', '.php', '.c', '.cpp'];
+
             extensionCounts.forEach((count, ext) => {
-                if (count > maxCount) {
+                if (count > maxCount || (count === maxCount && codeExtensions.includes(ext) && !codeExtensions.includes(dominantExtension))) {
                     maxCount = count;
                     dominantExtension = ext;
                 }
@@ -174,7 +175,9 @@ export class CodeAnalysisService {
 
             const language = languageMap[dominantExtension] || 'javascript';
             
-            const sourceFiles = files.filter(file => !testFiles.includes(file));
+            const sourceFiles = files
+                .filter(file => codeExtensions.includes(path.extname(file).toLowerCase()))
+                .filter(file => !testFiles.includes(file));
             
             return {
                 language,

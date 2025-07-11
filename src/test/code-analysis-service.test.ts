@@ -91,6 +91,28 @@ suite('CodeAnalysisService Test Suite', () => {
         assert.strictEqual(result.sourceFiles.length, 0);
     });
 
+    test('Should ignore non-code files', async () => {
+       workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/mock/workspace' }, name: 'mock-workspace', index: 0 }]);
+
+        const getAllFilesStub = sinon.stub(codeAnalysisService as any, 'getAllFiles');
+        
+        const mockFiles = [
+            '/mock/workspace/image.png',
+            '/mock/workspace/build/output.exe',
+            '/mock/workspace/logs/app.log',
+            '/mock/workspace/src/app.py'
+        ];
+
+        getAllFilesStub.resolves(mockFiles);
+        
+        const result = await codeAnalysisService.getProjectStructure();
+        
+        assert.strictEqual(result.language, 'python');
+        assert.strictEqual(result.hasTests, false);
+        assert.strictEqual(result.sourceFiles.length, 1);
+        assert.ok(result.sourceFiles[0].endsWith('app.py'));
+    });
+
     test('Should return recent commit history', async () => {
         const getRecentCommitsStub = gitServiceStub.getRecentCommits as sinon.SinonStub;
         getRecentCommitsStub.resolves([]);
