@@ -71,8 +71,7 @@ export class CodeAnalysisService {
         const results: string[] = [];
         
         try {
-            const fsPromises = await import('fs/promises');
-            const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+            const entries = await fs.promises.readdir(dir, { withFileTypes: true });
             
             const entryPromises = entries.map(async entry => {
                 
@@ -182,5 +181,18 @@ export class CodeAnalysisService {
 
     public async getCommitHistory(limit: number = 10): Promise<CommitInfo[]> {
         return await this.gitService.getRecentCommits(limit);
+    }
+
+    public async getImplementedCode(): Promise<string> {
+        const [commit] = await this.gitService.getRecentCommits(1);
+        const diff = await this.gitService.showCommitDetails([commit.hash]);
+        return this.extractAddedLines(diff).join('\n');
+    }
+
+    private extractAddedLines(diff: string): string[] {
+        return diff
+            .split('\n')
+            .filter(line => line.startsWith('+') && !line.startsWith('+++'))
+            .map(line => line.slice(1));
     }
 }

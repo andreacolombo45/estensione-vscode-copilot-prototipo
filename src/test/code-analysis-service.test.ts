@@ -199,4 +199,30 @@ suite('CodeAnalysisService Test Suite', () => {
 
         stub.restore();
     });
+
+    test('Should return added lines from last commit', async () => {
+        const mockCommit = {
+            hash: 'abc123',
+            message: 'Added new feature',
+            author: 'Andrea',
+            date: new Date(),
+        };
+
+        const getRecentCommitsStub = gitServiceStub.getRecentCommits as sinon.SinonStub;
+        getRecentCommitsStub.resolves([mockCommit]);
+        const showCommitDetailsStub = gitServiceStub.showCommitDetails as sinon.SinonStub;
+        showCommitDetailsStub.resolves(`
+diff --git a/file.ts b/file.ts
++++ b/file.ts
++const a = 1;
++function test() { return a; }
+-someRemovedLine()
+`);
+
+        const result = await codeAnalysisService.getImplementedCode();
+
+        assert.strictEqual(result, 'const a = 1;\nfunction test() { return a; }');
+        assert.ok(getRecentCommitsStub.calledOnceWith(1));
+        assert.ok(showCommitDetailsStub.calledOnceWith(['abc123']));
+    });
 });
