@@ -50,7 +50,7 @@ suite('CodeAnalysisService Test Suite', () => {
 
         getAllFilesStub.resolves(mockFiles);
         
-        const result = await codeAnalysisService.analyzeWorkspace();
+        const result = await codeAnalysisService.getProjectStructure();
         
         assert.strictEqual(result.language, 'typescript'); 
         assert.strictEqual(result.hasTests, true);
@@ -68,7 +68,7 @@ suite('CodeAnalysisService Test Suite', () => {
     test('Should handle workspace without folders', async () => {
         workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value(undefined);
         
-        const result = await codeAnalysisService.analyzeWorkspace();
+        const result = await codeAnalysisService.getProjectStructure();
         
         assert.strictEqual(result.language, 'unknown');
         assert.strictEqual(result.hasTests, false);

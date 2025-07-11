@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { CommitInfo, GitService } from './git-service';
 
+const IGNORED_DIRS = ['node_modules', '.git', '.vscode', 'dist', 'build', 'out'];
+
 export class CodeAnalysisService {
     private static instance: CodeAnalysisService;
 
@@ -13,90 +15,6 @@ export class CodeAnalysisService {
             CodeAnalysisService.instance = new CodeAnalysisService(gitService);
         }
         return CodeAnalysisService.instance;
-    }
-
-    public async analyzeWorkspace(): Promise<{ 
-        language: string; 
-        hasTests: boolean;
-        testFiles: string[];
-        sourceFiles: string[];
-    }> {
-        try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders || workspaceFolders.length === 0) {
-                throw new Error('Nessun workspace aperto');
-            }
-
-            const rootPath = workspaceFolders[0].uri.fsPath;
-            
-            const files = await this.getAllFiles(rootPath);
-            
-            const testFiles = files.filter(file => 
-                file.includes('.test.') || 
-                file.includes('.spec.') || 
-                file.includes('/__tests__/') || 
-                file.includes('/test/')
-            );
-            
-            const fileExtensions = files.map(file => path.extname(file).toLowerCase());
-            const extensionCounts = new Map<string, number>();
-            
-            fileExtensions.forEach(ext => {
-                const count = extensionCounts.get(ext) || 0;
-                extensionCounts.set(ext, count + 1);
-            });
-            
-            let dominantExtension = '';
-            let maxCount = 0;
-            
-            extensionCounts.forEach((count, ext) => {
-                if (count > maxCount) {
-                    maxCount = count;
-                    dominantExtension = ext;
-                }
-            });
-            
-            let language = 'javascript'; 
-            
-            switch (dominantExtension) {
-                case '.js':
-                    language = 'javascript';
-                    break;
-                case '.ts':
-                    language = 'typescript';
-                    break;
-                case '.py':
-                    language = 'python';
-                    break;
-                case '.java':
-                    language = 'java';
-                    break;
-                case '.cs':
-                    language = 'csharp';
-                    break;
-            }
-            
-            const sourceFiles = files.filter(file => 
-                !file.includes('node_modules') && 
-                !file.includes('.git') && 
-                !testFiles.includes(file)
-            );
-            
-            return {
-                language,
-                hasTests: testFiles.length > 0,
-                testFiles,
-                sourceFiles
-            };
-        } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante l'analisi del workspace: ${error}`);
-            return {
-                language: 'unknown',
-                hasTests: false,
-                testFiles: [],
-                sourceFiles: []
-            };
-        }
     }
 
     public async insertTestCode(testCode: string, targetFile: string): Promise<boolean> {
@@ -146,7 +64,7 @@ export class CodeAnalysisService {
     
     public async runTests(): Promise<{ success: boolean; output: string }> {
         try {
-            const workspaceInfo = await this.analyzeWorkspace();
+            const workspaceInfo = await this.getProjectStructure();
             
             return {
                 success: true,
@@ -169,29 +87,110 @@ export class CodeAnalysisService {
         const results: string[] = [];
         
         try {
-            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            const fsPromises = await import('fs/promises');
+            const entries = await fsPromises.readdir(dir, { withFileTypes: true });
             
-            for (const entry of entries) {
+            const entryPromises = entries.map(async entry => {
+                
+                if (entry.isDirectory() && IGNORED_DIRS.includes(entry.name)) {
+                    return [];
+                }
+                
                 const fullPath = path.join(dir, entry.name);
                 
                 if (entry.isDirectory()) {
-                    if (entry.name !== 'node_modules' && entry.name !== '.git') {
-                        const subDirFiles = await this.getAllFiles(fullPath);
-                        results.push(...subDirFiles);
-                    }
+                    return await this.getAllFiles(fullPath);
                 } else {
-                    results.push(fullPath);
+                    return [fullPath];
                 }
+            });
+
+            const fileArrays = await Promise.all(entryPromises);
+
+            for (const fileArray of fileArrays) {
+                results.push(...fileArray);
             }
         } catch (error) {
             console.error(`Errore durante la scansione della directory ${dir}:`, error);
         }
-        
         return results;
     }
 
-    public async getProjectStructure(): Promise<string[]> {
-        return [];
+    public async getProjectStructure(): Promise<{ 
+        language: string; 
+        hasTests: boolean;
+        testFiles: string[];
+        sourceFiles: string[];
+    }> {
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders || workspaceFolders.length === 0) {
+                throw new Error('Nessun workspace aperto');
+            }
+
+            const rootPath = workspaceFolders[0].uri.fsPath;
+            
+            const files = await this.getAllFiles(rootPath);
+            
+            const testFiles = files.filter(file => 
+                file.includes('.test.') || 
+                file.includes('.spec.') || 
+                file.includes('/__tests__/') || 
+                file.includes('/test/')
+            );
+            
+            const fileExtensions = files.map(file => path.extname(file).toLowerCase());
+            const extensionCounts = new Map<string, number>();
+            
+            fileExtensions.forEach(ext => {
+                if (ext) {
+                    const count = extensionCounts.get(ext) || 0;
+                    extensionCounts.set(ext, count + 1);
+                }
+            });
+            
+            let dominantExtension = '';
+            let maxCount = 0;
+            
+            extensionCounts.forEach((count, ext) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    dominantExtension = ext;
+                }
+            });
+            
+            const languageMap: Record<string, string> = {
+                '.js': 'javascript',
+                '.ts': 'typescript',
+                '.py': 'python',
+                '.java': 'java',
+                '.cs': 'csharp',
+                '.go': 'go',
+                '.rb': 'ruby',
+                '.php': 'php',
+                '.c': 'c',
+                '.cpp': 'cpp'
+            };
+
+            const language = languageMap[dominantExtension] || 'javascript';
+            
+            const sourceFiles = files.filter(file => !testFiles.includes(file));
+            
+            return {
+                language,
+                hasTests: testFiles.length > 0,
+                testFiles,
+                sourceFiles
+            };
+        } catch (error) {
+            vscode.window.showErrorMessage(`Errore durante l'analisi del workspace: ${error}`);
+            return {
+                language: 'unknown',
+                hasTests: false,
+                testFiles: [],
+                sourceFiles: []
+            };
+        }
     }
 
     public async getCommitHistory(limit: number = 10): Promise<CommitInfo[]> {
