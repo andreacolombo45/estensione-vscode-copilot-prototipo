@@ -2,11 +2,14 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CommitInfo, GitService } from './git-service';
+import { exec } from 'child_process';
+import {promisify} from 'util';
 
 const IGNORED_DIRS = ['node_modules', '.git', '.vscode', 'dist', 'build', 'out'];
 
 export class CodeAnalysisService {
     private static instance: CodeAnalysisService;
+    private execPromise = promisify(exec);
 
     private constructor(private gitService: GitService) {}
 
@@ -57,22 +60,10 @@ export class CodeAnalysisService {
     
     public async runTests(): Promise<{ success: boolean; output: string }> {
         try {
-            const workspaceInfo = await this.getProjectStructure();
-            
-            return {
-                success: true,
-                output: 'Test eseguiti con successo:\n\n' +
-                       '✅ Test di registrazione utente\n' +
-                       '✅ Test di login utente\n' +
-                       '✅ Test di login fallito\n\n' +
-                       'PASS: 3 test completati'
-            };
-        } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante l'esecuzione dei test: ${error}`);
-            return {
-                success: false,
-                output: `Errore durante l'esecuzione dei test: ${error}`
-            };
+            const { stdout, stderr } = await this.execPromise('npm test');
+            return { success: true, output: stdout || stderr };
+        } catch (err: any) {
+            return { success: false, output: err.message };
         }
     }
 
