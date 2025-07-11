@@ -77,6 +77,20 @@ suite('CodeAnalysisService Test Suite', () => {
         assert.ok(showErrorMessageSpy.called);
     });
 
+    test('Should handle empty file list', async () => {
+        workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/mock/workspace' }, name: 'mock-workspace', index: 0 }]);
+
+        const getAllFilesStub = sinon.stub(codeAnalysisService as any, 'getAllFiles');
+        getAllFilesStub.resolves([]);
+
+        const result = await codeAnalysisService.getProjectStructure();
+
+        assert.strictEqual(result.language, 'javascript');
+        assert.strictEqual(result.hasTests, false);
+        assert.strictEqual(result.testFiles.length, 0);
+        assert.strictEqual(result.sourceFiles.length, 0);
+    });
+
     test('Should return recent commit history', async () => {
         const getRecentCommitsStub = gitServiceStub.getRecentCommits as sinon.SinonStub;
         getRecentCommitsStub.resolves([]);
