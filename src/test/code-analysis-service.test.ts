@@ -186,4 +186,17 @@ suite('CodeAnalysisService Test Suite', () => {
 
         stub.restore();
     });
+
+    test('Should run tests and handle failure', async () => {
+        const stub = sinon.stub<any, any>(codeAnalysisService as any, 'execPromise')
+            .rejects(new Error('Test failed'));
+
+        const result = await codeAnalysisService.runTests();
+
+        assert.strictEqual(result.success, false);
+        assert.strictEqual(result.output, 'Test failed');
+        assert.ok(stub.calledWith('npm test'));
+
+        stub.restore();
+    });
 });
