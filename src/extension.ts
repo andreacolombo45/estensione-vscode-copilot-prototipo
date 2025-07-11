@@ -5,17 +5,23 @@ import { TddPhase } from './models/tdd-models';
 import { TddStateManager } from './services/tdd-state-manager';
 import { AiService } from './services/ai-service';
 import { CodeAnalysisService } from './services/code-analysis-service';
+import { GitService } from './services/git-service';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
 	console.log('Estensione "TDD-Mentor-AI" attivata!');
 
     const stateManager = TddStateManager.getInstance();
-    const aiService = AiService.getInstance();
-    const codeAnalysisService = CodeAnalysisService.getInstance();
+    const aiService = await AiService.getInstance();
+    const gitService = await GitService.create();
+    if (!gitService) {
+		console.warn('Git not initialized.');
+		return;
+	}
+    const codeAnalysisService = CodeAnalysisService.getInstance(gitService);
 
     const tddCycleViewProvider = new TddCycleView(context.extensionUri);
-    const tddInteractionViewProvider = new TddInteractionView(context.extensionUri);
+    const tddInteractionViewProvider = await TddInteractionView.create(context.extensionUri);
 
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(

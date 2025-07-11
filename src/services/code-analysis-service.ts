@@ -1,21 +1,105 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { CommitInfo, GitService } from './git-service';
+import { exec } from 'child_process';
+import {promisify} from 'util';
+
+const IGNORED_DIRS = ['node_modules', '.git', '.vscode', 'dist', 'build', 'out'];
 
 export class CodeAnalysisService {
     private static instance: CodeAnalysisService;
+    private execPromise = promisify(exec);
 
-    private constructor() {
-    }
+    private constructor(private gitService: GitService) {}
 
-    public static getInstance(): CodeAnalysisService {
+    public static getInstance(gitService: GitService): CodeAnalysisService {
         if (!CodeAnalysisService.instance) {
-            CodeAnalysisService.instance = new CodeAnalysisService();
+            CodeAnalysisService.instance = new CodeAnalysisService(gitService);
         }
         return CodeAnalysisService.instance;
     }
 
-    public async analyzeWorkspace(): Promise<{ 
+    public async insertTestCode(testCode: string, targetFile: string): Promise<boolean> {
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                throw new Error('Nessun workspace aperto');
+            }
+
+            const rootPath = workspaceFolders[0].uri.fsPath;
+            const allFiles = await this.getAllFiles(rootPath);
+
+            let testFilePath = allFiles.find(file =>
+                file.endsWith(targetFile) || path.basename(file) === targetFile
+            );
+
+            if (!testFilePath) {
+                testFilePath = path.join(rootPath, 'tests', targetFile);
+                const dir = path.dirname(testFilePath);
+
+                await fs.promises.mkdir(dir, { recursive: true });
+                await fs.promises.writeFile(testFilePath, '');
+            }
+
+            const currentContent = await fs.promises.readFile(testFilePath, 'utf8');
+
+            const updatedContent = `${currentContent.trim()}\n\n${testCode.trim()}\n`;
+
+            await fs.promises.writeFile(testFilePath, updatedContent);
+
+            const document = await vscode.workspace.openTextDocument(testFilePath);
+            await vscode.window.showTextDocument(document);
+            
+            return true;
+        } catch (error) {
+            vscode.window.showErrorMessage(`Errore durante l'inserimento del codice di test: ${error}`);
+            return false;
+        }
+    }
+    
+    public async runTests(): Promise<{ success: boolean; output: string }> {
+        try {
+            const { stdout, stderr } = await this.execPromise('npm test');
+            return { success: true, output: stdout || stderr };
+        } catch (err: any) {
+            return { success: false, output: err.message };
+        }
+    }
+
+    private async getAllFiles(dir: string): Promise<string[]> {
+        const results: string[] = [];
+        
+        try {
+            const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+            
+            const entryPromises = entries.map(async entry => {
+                
+                if (entry.isDirectory() && IGNORED_DIRS.includes(entry.name)) {
+                    return [];
+                }
+                
+                const fullPath = path.join(dir, entry.name);
+                
+                if (entry.isDirectory()) {
+                    return await this.getAllFiles(fullPath);
+                } else {
+                    return [fullPath];
+                }
+            });
+
+            const fileArrays = await Promise.all(entryPromises);
+
+            for (const fileArray of fileArrays) {
+                results.push(...fileArray);
+            }
+        } catch (error) {
+            console.error(`Errore durante la scansione della directory ${dir}:`, error);
+        }
+        return results;
+    }
+
+    public async getProjectStructure(): Promise<{ 
         language: string; 
         hasTests: boolean;
         testFiles: string[];
@@ -42,45 +126,41 @@ export class CodeAnalysisService {
             const extensionCounts = new Map<string, number>();
             
             fileExtensions.forEach(ext => {
-                const count = extensionCounts.get(ext) || 0;
-                extensionCounts.set(ext, count + 1);
+                if (ext) {
+                    const count = extensionCounts.get(ext) || 0;
+                    extensionCounts.set(ext, count + 1);
+                }
             });
             
             let dominantExtension = '';
             let maxCount = 0;
-            
+            const codeExtensions = ['.ts', '.js', '.py', '.java', '.cs', '.go', '.rb', '.php', '.c', '.cpp'];
+
             extensionCounts.forEach((count, ext) => {
-                if (count > maxCount) {
+                if (count > maxCount || (count === maxCount && codeExtensions.includes(ext) && !codeExtensions.includes(dominantExtension))) {
                     maxCount = count;
                     dominantExtension = ext;
                 }
             });
             
-            let language = 'javascript'; 
+            const languageMap: Record<string, string> = {
+                '.js': 'javascript',
+                '.ts': 'typescript',
+                '.py': 'python',
+                '.java': 'java',
+                '.cs': 'csharp',
+                '.go': 'go',
+                '.rb': 'ruby',
+                '.php': 'php',
+                '.c': 'c',
+                '.cpp': 'cpp'
+            };
+
+            const language = languageMap[dominantExtension] || 'javascript';
             
-            switch (dominantExtension) {
-                case '.js':
-                    language = 'javascript';
-                    break;
-                case '.ts':
-                    language = 'typescript';
-                    break;
-                case '.py':
-                    language = 'python';
-                    break;
-                case '.java':
-                    language = 'java';
-                    break;
-                case '.cs':
-                    language = 'csharp';
-                    break;
-            }
-            
-            const sourceFiles = files.filter(file => 
-                !file.includes('node_modules') && 
-                !file.includes('.git') && 
-                !testFiles.includes(file)
-            );
+            const sourceFiles = files
+                .filter(file => codeExtensions.includes(path.extname(file).toLowerCase()))
+                .filter(file => !testFiles.includes(file));
             
             return {
                 language,
@@ -99,102 +179,20 @@ export class CodeAnalysisService {
         }
     }
 
-    public async insertTestCode(testCode: string, targetFile: string): Promise<boolean> {
-        try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders) {
-                throw new Error('Nessun workspace aperto');
-            }
-
-            const rootPath = workspaceFolders[0].uri.fsPath;
-            let testFilePath = '';
-
-            const existingTestFiles = await this.getAllFiles(rootPath);
-            const matchingFiles = existingTestFiles.filter(file => 
-                file.endsWith(targetFile) || 
-                path.basename(file) === targetFile
-            );
-
-            if (matchingFiles.length > 0) {
-                testFilePath = matchingFiles[0];
-            } else {
-                testFilePath = path.join(rootPath, 'tests', targetFile);
-                
-                const testDir = path.dirname(testFilePath);
-                if (!fs.existsSync(testDir)) {
-                    fs.mkdirSync(testDir, { recursive: true });
-                }
-                
-                fs.writeFileSync(testFilePath, '');
-            }
-
-            const currentContent = fs.readFileSync(testFilePath, 'utf8');
-            
-            const updatedContent = currentContent + '\n' + testCode + '\n';
-            
-            fs.writeFileSync(testFilePath, updatedContent);
-            
-            const document = await vscode.workspace.openTextDocument(testFilePath);
-            await vscode.window.showTextDocument(document);
-            
-            return true;
-        } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante l'inserimento del codice di test: ${error}`);
-            return false;
-        }
-    }
-    
-    public async runTests(): Promise<{ success: boolean; output: string }> {
-        try {
-            const workspaceInfo = await this.analyzeWorkspace();
-            
-            return {
-                success: true,
-                output: 'Test eseguiti con successo:\n\n' +
-                       '✅ Test di registrazione utente\n' +
-                       '✅ Test di login utente\n' +
-                       '✅ Test di login fallito\n\n' +
-                       'PASS: 3 test completati'
-            };
-        } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante l'esecuzione dei test: ${error}`);
-            return {
-                success: false,
-                output: `Errore durante l'esecuzione dei test: ${error}`
-            };
-        }
+    public async getCommitHistory(limit: number = 10): Promise<CommitInfo[]> {
+        return await this.gitService.getRecentCommits(limit);
     }
 
-    private async getAllFiles(dir: string): Promise<string[]> {
-        const results: string[] = [];
-        
-        try {
-            const entries = fs.readdirSync(dir, { withFileTypes: true });
-            
-            for (const entry of entries) {
-                const fullPath = path.join(dir, entry.name);
-                
-                if (entry.isDirectory()) {
-                    if (entry.name !== 'node_modules' && entry.name !== '.git') {
-                        const subDirFiles = await this.getAllFiles(fullPath);
-                        results.push(...subDirFiles);
-                    }
-                } else {
-                    results.push(fullPath);
-                }
-            }
-        } catch (error) {
-            console.error(`Errore durante la scansione della directory ${dir}:`, error);
-        }
-        
-        return results;
+    public async getImplementedCode(): Promise<string> {
+        const [commit] = await this.gitService.getRecentCommits(1);
+        const diff = await this.gitService.showCommitDetails([commit.hash]);
+        return this.extractAddedLines(diff).join('\n');
     }
 
-    public async getProjectStructure(): Promise<string[]> {
-        return [];
-    }
-
-    public async getCommitHistory(): Promise<string[]> {
-        return [];
+    private extractAddedLines(diff: string): string[] {
+        return diff
+            .split('\n')
+            .filter(line => line.startsWith('+') && !line.startsWith('+++'))
+            .map(line => line.slice(1));
     }
 }

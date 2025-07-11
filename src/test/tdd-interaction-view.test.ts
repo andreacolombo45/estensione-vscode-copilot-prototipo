@@ -6,6 +6,7 @@ import { AiService } from '../services/ai-service';
 import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase } from '../models/tdd-models';
 import { CodeAnalysisService } from '../services/code-analysis-service';
+import { GitService } from '../services/git-service';
 
 suite('TddInteractionView Test Suite', () => {
     let tddInteractionView: TddInteractionView;
@@ -16,14 +17,38 @@ suite('TddInteractionView Test Suite', () => {
     let aiService: AiService;
     let codeAnalysisService: CodeAnalysisService;
 
-    setup(() => {
+    setup(async () => {
         (TddStateManager as any).instance = undefined;
         (AiService as any).instance = undefined;
         (CodeAnalysisService as any).instance = undefined;
 
+        sinon.stub(vscode.workspace, 'workspaceFolders').value([
+            {
+                uri: { fsPath: '/mock/workspace' },
+                name: 'mock-workspace',
+                index: 0
+            } as unknown as vscode.WorkspaceFolder
+        ]);
+        const gitServiceStub = {} as any as GitService;
+        sinon.stub(GitService, 'create').resolves(gitServiceStub);
+
+        const codeAnalysisServiceStub = {
+            getProjectStructure: sinon.stub().resolves({ files: [], folders: [] }),
+            getCommitHistory: sinon.stub().resolves({ commits: [] }),
+            insertTestCode: sinon.stub().resolves(true)
+        } as any as CodeAnalysisService;
+
+        sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
+
+        codeAnalysisService = codeAnalysisServiceStub;
+
+        const aiClientStub = {
+            sendPrompt: sinon.stub().resolves('Fake response')
+        } as any;
+
+        aiService = await AiService.getInstance(aiClientStub, codeAnalysisServiceStub);
+        
         stateManager = TddStateManager.getInstance();
-        aiService = AiService.getInstance();
-        codeAnalysisService = CodeAnalysisService.getInstance();
 
         mockWebview = {
             html: '',
@@ -46,7 +71,7 @@ suite('TddInteractionView Test Suite', () => {
 
         mockExtensionUri = vscode.Uri.file('/mock/extension/path');
 
-        tddInteractionView = new TddInteractionView(mockExtensionUri);
+        tddInteractionView = await TddInteractionView.create(mockExtensionUri);
     });
 
     teardown(() => {
@@ -181,7 +206,8 @@ suite('TddInteractionView Test Suite', () => {
         const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
         const updateModifiedSelectedTestSpy = sinon.spy(stateManager, 'updateModifiedSelectedTest');
-        const insertTestCodeStub = sinon.stub(codeAnalysisService, 'insertTestCode' as any).resolves(true);
+        const insertTestCodeStub = codeAnalysisService.insertTestCode as sinon.SinonStub;
+        insertTestCodeStub.resetHistory();
 
         const testCode = 'test code';
         const targetFile = 'test.js';

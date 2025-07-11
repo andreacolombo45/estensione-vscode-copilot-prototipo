@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { TddPhase, TddState, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
 import { TddStateManager } from '../services/tdd-state-manager';
 import { AiService } from '../services/ai-service';
+import { GitService } from '../services/git-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 
 export class TddInteractionView implements vscode.WebviewViewProvider {
@@ -13,17 +14,31 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     private readonly _aiService: AiService;
     private readonly _codeAnalysisService: CodeAnalysisService;
 
-    constructor(extensionUri: vscode.Uri) {
+    private constructor(
+        extensionUri: vscode.Uri,
+        aiService: AiService,
+        codeAnalysisService: CodeAnalysisService
+    ) {
         this._extensionUri = extensionUri;
         this._stateManager = TddStateManager.getInstance();
-        this._aiService = AiService.getInstance();
-        this._codeAnalysisService = CodeAnalysisService.getInstance();
-        
+        this._aiService = aiService;
+        this._codeAnalysisService = codeAnalysisService;
+
         this._stateManager.onStateChanged(() => {
             if (this._view) {
                 this._updateView();
             }
         });
+    }
+
+    public static async create(extensionUri: vscode.Uri): Promise<TddInteractionView> {
+        const gitService = await GitService.create();
+        if (!gitService) {
+            throw new Error('Git service could not be initialized. Please ensure you have a valid Git repository.');
+        }
+        const codeAnalysisService = CodeAnalysisService.getInstance(gitService);
+        const aiService = await AiService.getInstance(undefined, codeAnalysisService);
+        return new TddInteractionView(extensionUri, aiService, codeAnalysisService);
     }
 
     public resolveWebviewView(
