@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
-import { get } from 'http';
+import * as fs from 'fs';
 
 suite('CodeAnalysisService Test Suite', () => {
     let codeAnalysisService: CodeAnalysisService;
@@ -92,7 +92,7 @@ suite('CodeAnalysisService Test Suite', () => {
     });
 
     test('Should ignore non-code files', async () => {
-       workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/mock/workspace' }, name: 'mock-workspace', index: 0 }]);
+        workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/mock/workspace' }, name: 'mock-workspace', index: 0 }]);
 
         const getAllFilesStub = sinon.stub(codeAnalysisService as any, 'getAllFiles');
         
@@ -120,5 +120,28 @@ suite('CodeAnalysisService Test Suite', () => {
         const commits = await codeAnalysisService.getCommitHistory(5);
 
         assert.ok(getRecentCommitsStub.calledOnceWith(5));
+    });
+
+    test('Should append code to existing test file', async () => {
+        const testFilePath = '/mock/workspace/tests/example.test.js';
+        const testCode = 'testCode';
+        workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/mock/workspace' }, name: 'mock-workspace', index: 0 }]);
+
+        sinon.stub(codeAnalysisService as any, 'getAllFiles').resolves([testFilePath]);
+
+        const readFileStub = sinon.stub(fs.promises, 'readFile').resolves('existing content');
+        const writeFileStub = sinon.stub(fs.promises, 'writeFile').resolves();
+
+        sinon.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
+        sinon.stub(vscode.window, 'showTextDocument').resolves();
+
+        const success = await codeAnalysisService.insertTestCode(testCode, 'example.test.js');
+
+        assert.strictEqual(success, true);
+        assert.ok(readFileStub.calledWith(testFilePath));
+        assert.ok(writeFileStub.calledWith(
+            testFilePath,
+            sinon.match((value: string | string[]) => value.includes('existing content') && value.includes(testCode))
+        ));
     });
 });

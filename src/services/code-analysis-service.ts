@@ -25,33 +25,26 @@ export class CodeAnalysisService {
             }
 
             const rootPath = workspaceFolders[0].uri.fsPath;
-            let testFilePath = '';
+            const allFiles = await this.getAllFiles(rootPath);
 
-            const existingTestFiles = await this.getAllFiles(rootPath);
-            const matchingFiles = existingTestFiles.filter(file => 
-                file.endsWith(targetFile) || 
-                path.basename(file) === targetFile
+            let testFilePath = allFiles.find(file =>
+                file.endsWith(targetFile) || path.basename(file) === targetFile
             );
 
-            if (matchingFiles.length > 0) {
-                testFilePath = matchingFiles[0];
-            } else {
+            if (!testFilePath) {
                 testFilePath = path.join(rootPath, 'tests', targetFile);
-                
-                const testDir = path.dirname(testFilePath);
-                if (!fs.existsSync(testDir)) {
-                    fs.mkdirSync(testDir, { recursive: true });
-                }
-                
-                fs.writeFileSync(testFilePath, '');
+                const dir = path.dirname(testFilePath);
+
+                await fs.promises.mkdir(dir, { recursive: true });
+                await fs.promises.writeFile(testFilePath, '');
             }
 
-            const currentContent = fs.readFileSync(testFilePath, 'utf8');
-            
-            const updatedContent = currentContent + '\n' + testCode + '\n';
-            
-            fs.writeFileSync(testFilePath, updatedContent);
-            
+            const currentContent = await fs.promises.readFile(testFilePath, 'utf8');
+
+            const updatedContent = `${currentContent.trim()}\n\n${testCode.trim()}\n`;
+
+            await fs.promises.writeFile(testFilePath, updatedContent);
+
             const document = await vscode.workspace.openTextDocument(testFilePath);
             await vscode.window.showTextDocument(document);
             
