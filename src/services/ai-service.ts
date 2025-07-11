@@ -136,8 +136,8 @@ export class AiService {
 
     public async generateRefactoringSuggestions(): Promise<RefactoringSuggestion[]> {
         try {
-            /*const implementedCode = await this.codeAnalysisService.getImplementedCode();*/
-            const tenRefactoringSuggestions = await this.generateTenItems<RefactoringSuggestion>('refactoringSuggestions' /*,{ implementedCode }*/);
+            const implementedCode = await this.codeAnalysisService.getImplementedCode();
+            const tenRefactoringSuggestions = await this.generateTenItems<RefactoringSuggestion>('refactoringSuggestions' ,{ implementedCode });
 
             return await this.selectThreeItems<RefactoringSuggestion>('refactoringSuggestions', tenRefactoringSuggestions);
         } catch (error) {

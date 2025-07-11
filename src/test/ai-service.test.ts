@@ -134,10 +134,12 @@ suite('AiService Test Suite', () => {
 
         const getProjectStructureStub = sinon.stub().resolves({ files: [], folders: [] });
         const getCommitHistoryStub = sinon.stub().resolves({ commits: [] });
+        const getImplementedCodeStub = sinon.stub().resolves({ code: '' });
 
         const codeAnalysisServiceStub = {
             getProjectStructure: getProjectStructureStub,
-            getCommitHistory: getCommitHistoryStub
+            getCommitHistory: getCommitHistoryStub,
+            getImplementedCode: getImplementedCodeStub
         } as any as CodeAnalysisService;
 
         sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
