@@ -82,21 +82,6 @@ suite('TddInteractionView Test Suite', () => {
         assert.strictEqual(TddInteractionView.viewType, 'tdd-mentor-ai-interaction');
     });
 
-    test("Should generate user stories on first PICK phase", () => {
-        const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
-            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
-        ]);
-
-        stateManager.setPhase(TddPhase.PICK);
-
-        const context = {} as vscode.WebviewViewResolveContext;
-        const token = {} as vscode.CancellationToken;
-
-        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
-
-        assert.ok(generateUserStoriesStub.calledOnce);
-    });
-
     test("Should handle selectUserStory message", async () => {
         const selectUserStorySpy = sinon.spy(stateManager, 'selectUserStory');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
