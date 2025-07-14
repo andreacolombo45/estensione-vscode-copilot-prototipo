@@ -46,8 +46,8 @@ suite('TddInteractionView Test Suite', () => {
             sendPrompt: sinon.stub().resolves('Fake response')
         } as any;
 
-        aiService = await AiService.getInstance(aiClientStub, codeAnalysisServiceStub);
-        
+        aiService = await AiService.getInstance(codeAnalysisService, aiClientStub);
+
         stateManager = TddStateManager.getInstance();
 
         mockWebview = {
@@ -71,7 +71,7 @@ suite('TddInteractionView Test Suite', () => {
 
         mockExtensionUri = vscode.Uri.file('/mock/extension/path');
 
-        tddInteractionView = await TddInteractionView.create(mockExtensionUri);
+        tddInteractionView = await TddInteractionView.create(mockExtensionUri, aiService, codeAnalysisService);
     });
 
     teardown(() => {

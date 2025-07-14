@@ -3,7 +3,6 @@ import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-mo
 import { AiClient } from './ai-client';
 import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
-import { GitService } from './git-service';
 
 type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion;
 
@@ -15,16 +14,13 @@ export class AiService {
         private readonly configs: typeof aiConfigs
     ) {}
 
-    public static async getInstance(aiClient?: AiClient, codeAnalysisService?: CodeAnalysisService): Promise<AiService> {
+    public static async getInstance(codeAnalysisService: CodeAnalysisService, aiClient?: AiClient): Promise<AiService> {
         if (!AiService.instance) {
-            const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
-            const finalAiClient = aiClient || new AiClient(apikey);
-            const gitService = await GitService.create();   
-            if (!gitService) {
-                throw new Error('Git service could not be initialized. Please ensure you have a valid Git repository.');
+            if (!aiClient) {
+                const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+                aiClient = new AiClient(apikey);
             }
-            const finalCodeAnalysisService = codeAnalysisService || CodeAnalysisService.getInstance(gitService);
-            AiService.instance = new AiService(finalAiClient, finalCodeAnalysisService, aiConfigs);
+            AiService.instance = new AiService(aiClient, codeAnalysisService, aiConfigs);
         }
         return AiService.instance;
     }
