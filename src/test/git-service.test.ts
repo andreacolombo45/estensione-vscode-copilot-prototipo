@@ -50,13 +50,14 @@ suite('GitService Test Suite', () => {
     test('Should return parsed commits', async () => {
         const execStub = sinon.stub();
         execStub.onCall(0).resolves({ stdout: 'true' });
+        execStub.onCall(1).resolves({ stdout: 'some-hash' });
 
-        execStub.onCall(1).resolves({
+        execStub.onCall(2).resolves({
             stdout: `abc123|Andrea|1625079600|Fix bug\nxyz789|Bob|1625079601|Add feature`
         });
 
-        execStub.onCall(2).resolves({ stdout: 'src/file1.ts\nsrc/file2.ts\n' });
-        execStub.onCall(3).resolves({ stdout: 'test/test1.spec.ts\n' });
+        execStub.onCall(3).resolves({ stdout: 'src/file1.ts\nsrc/file2.ts\n' });
+        execStub.onCall(4).resolves({ stdout: 'test/test1.spec.ts\n' });
 
         const gitService = await GitService.create(execStub);
 
