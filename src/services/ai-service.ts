@@ -67,7 +67,7 @@ export class AiService {
 
         try {
             const config = this.configs[type];
-            const selectionPrompt = config.selectionPrompt;
+            const selectionPrompt = `${config.selectionPrompt} ${JSON.stringify(items)}`;
 
             const response = await this.aiClient.sendRequest<{ items: T[] }>(
                 selectionPrompt,
@@ -77,7 +77,6 @@ export class AiService {
                     temperature: 0.3,
                     context: {
                         ...context,
-                        items
                     }
                 }
             );
@@ -96,11 +95,17 @@ export class AiService {
     private async getProjectContext(): Promise<any> {
         try {
             const projectStructure = await this.codeAnalysisService.getProjectStructure();
-            const commitHistory = await this.codeAnalysisService.getCommitHistory();
+            const commitHistory = await this.codeAnalysisService.getCommitHistory(3);
 
             return {
-                projectStructure,
-                commitHistory
+                language: projectStructure.language,
+                hasTests: projectStructure.hasTests,
+                testFiles: projectStructure.testFiles.slice(0, 5).map(f => f.split('/').pop()),
+                sourceFiles: projectStructure.sourceFiles.slice(0, 5).map(f => f.split('/').pop()),
+                recentCommits: commitHistory.map(commit => ({
+                    date: commit.date,
+                    message: commit.message
+                }))
             };
         } catch (error) {
             vscode.window.showErrorMessage(`Error during workspace analysis: ${error}`);

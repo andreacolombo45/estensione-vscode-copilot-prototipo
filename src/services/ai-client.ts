@@ -3,7 +3,7 @@ import { AiRequest, AiRequestOptions, AIResponse } from '../models/tdd-models';
 
 export class AiClient {
     private readonly apiKey: string;
-    private readonly apiUrl: string = 'https://api.openai.com/v1/chat/completions';
+    private readonly apiUrl: string = 'https://openrouter.ai/api/v1/chat/completions';
 
     constructor(apiKey?: string) {
         this.apiKey = apiKey || vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
@@ -20,53 +20,88 @@ export class AiClient {
         if (!this.apiKey) {
             throw new Error('API key is not set.');
         }
+
         try {
             const messages: AiRequest[] = [];
 
-        if (options.systemPrompt) {
-            messages.push({
-                    role: 'system',
-                    content: options.systemPrompt
-                });
-        }
+            if (options.systemPrompt) {
+                messages.push({
+                        role: 'system',
+                        content: options.systemPrompt
+                    });
+            }
 
-        messages.push({
-                role: 'user',
-                content: prompt
+            messages.push({
+                    role: 'user',
+                    content: prompt
+                });
+
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'HTTP-Referer': 'https://vscode-extension.tdd-mentor-ai', 
+                    'X-Title': 'TDD-Mentor-AI'
+                },
+                body: JSON.stringify({
+                    model: options.model ?? 'deepseek/deepseek-chat-v3-0324:free',
+                    messages: messages,
+                    max_tokens: options.maxTokens ?? 1000,
+                    temperature: options.temperature ?? 0.7
+                })
             });
 
-        const response = await fetch(this.apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-                model: options.model ?? 'gpt-3.5-turbo',
-                messages: messages,
-                max_tokens: options.maxTokens ?? 2000,
-                temperature: options.temperature ?? 0.7
-            })
-        });
+            // Log the response for debugging
+            vscode.window.showInformationMessage(`Response received from OpenRouter: ${response.status} ${response.statusText}`);
+            vscode.window.showInformationMessage(`Response headers: ${JSON.stringify(Object.fromEntries([...response.headers.entries()]))}`);
+            vscode.window.showInformationMessage(`Response status: ${response.status} ${response.statusText}`);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`AI request failed: ${response.status} ${errorText}`);
+            if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+                let errorMessage: string;
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    errorMessage = `OpenRouter API error: ${JSON.stringify(errorData)}`;
+                } else {
+                    errorMessage = await response.text();
+                    console.error('Non-JSON error response:', errorMessage);
+                }
+                
+                throw new Error(`AI request failed (${response.status}): ${errorMessage}`);
+            }
+
+            const data = await response.json() as AIResponse;
+
+            // Log the complete API response for debugging
+            const outputChannel = vscode.window.createOutputChannel('TDD Mentor AI Debug');
+            outputChannel.appendLine('--- RISPOSTA COMPLETA API ---');
+            outputChannel.appendLine(JSON.stringify(data, null, 2));
+            outputChannel.appendLine('--------------------------');
+            outputChannel.show();
+            
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                const content = data.choices[0].message.content;
+                try {
+                    const jsonRegex = /```(?:json)?\s*([\s\S]*?)```/;
+                    const match = content.match(jsonRegex);
+                    
+                    const jsonContent = match ? match[1].trim() : content.trim();
+                    
+                    const parsedContent = JSON.parse(jsonContent);
+                    return parsedContent as T;
+                } catch (parseError) {
+                    console.warn('Failed to parse response as JSON, returning raw response');
+                    return data as unknown as T;
+                }
+            } else {
+                throw new Error('Invalid response format from OpenRouter API');
+            }
+
+        } catch (error: any) {
+            console.error('Errore nella richiesta a OpenRouter:', error);
+            throw error;
         }
-
-        const data = await response.json() as AIResponse;
-
-        return data as T;
-
-    } catch (error: any) {
-        console.error('Errore nella richiesta a OpenAI:', error);
-
-        if (error.response) {
-            console.error('Dettagli errore API:', error.response.data);
-            throw new Error(`Errore API OpenAI: ${error.response.data.error?.message || 'Errore sconosciuto'}`);
-        }
-
-        throw error;
-    }
     }
 }
