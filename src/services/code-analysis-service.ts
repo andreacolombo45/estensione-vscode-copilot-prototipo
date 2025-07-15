@@ -184,8 +184,12 @@ export class CodeAnalysisService {
     }
 
     public async getImplementedCode(): Promise<string> {
-        const [commit] = await this.gitService.getRecentCommits(1);
-        const diff = await this.gitService.showCommitDetails([commit.hash]);
+        const commits = await this.gitService.getRecentCommits(1);
+        if (commits.length === 0) {
+            return '';
+        }
+
+        const diff = await this.gitService.showCommitDetails([commits[0].hash]);
         return this.extractAddedLines(diff).join('\n');
     }
 
