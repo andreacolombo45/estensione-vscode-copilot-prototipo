@@ -7,6 +7,7 @@ import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase } from '../models/tdd-models';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
+import { get } from 'http';
 
 suite('TddInteractionView Test Suite', () => {
     let tddInteractionView: TddInteractionView;
@@ -36,7 +37,8 @@ suite('TddInteractionView Test Suite', () => {
             getProjectStructure: sinon.stub().resolves({ files: [], folders: [] }),
             getCommitHistory: sinon.stub().resolves({ commits: [] }),
             insertTestCode: sinon.stub().resolves(true),
-            commitChanges: sinon.stub().resolves()
+            commitChanges: sinon.stub().resolves(),
+            getModifiedFiles: sinon.stub().resolves(' M src/file1.ts\n M src/file2.ts\n'),
         } as any as CodeAnalysisService;
 
         sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
@@ -173,6 +175,9 @@ suite('TddInteractionView Test Suite', () => {
 
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
         const setUserStoriesSpy = sinon.spy(stateManager, 'setUserStories');
+        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
+        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -182,6 +187,9 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'completePhase' });
 
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(showInputBoxStub.calledOnce);
+        assert.ok(commitChangesStub.calledOnce);
         assert.ok(generateUserStoriesStub.called);
         assert.ok(setPhaseSpy.calledWith(TddPhase.PICK));
         assert.ok(setUserStoriesSpy.calledWith([

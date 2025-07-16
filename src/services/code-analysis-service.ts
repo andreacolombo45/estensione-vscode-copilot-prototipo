@@ -232,4 +232,13 @@ export class CodeAnalysisService {
             vscode.window.showErrorMessage(`Error during commit: ${error}`);
         }
     }
+
+    public async getModifiedFiles(): Promise<string> {
+        try {
+            return await this.gitService.getModifiedFiles();
+        } catch (error) {
+            vscode.window.showErrorMessage(`Errore durante il recupero dei file modificati: ${error}`);
+            return '';
+        }
+    }
 }
