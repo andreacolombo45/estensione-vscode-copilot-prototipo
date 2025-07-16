@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CommitInfo, GitService } from './git-service';
+import { TddPhase, TddState } from '../models/tdd-models';
 import { exec } from 'child_process';
 import {promisify} from 'util';
 
@@ -198,5 +199,27 @@ export class CodeAnalysisService {
             .split('\n')
             .filter(line => line.startsWith('+') && !line.startsWith('+++'))
             .map(line => line.slice(1));
+    }
+
+    public async commitChanges(state: TddState, commitTitle?: string): Promise<string> {
+        try {
+            const modifiedFiles = await this.gitService.getModifiedFiles();
+            const filesToCommit = modifiedFiles
+                .split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => line.substring(3));
+            
+            if (filesToCommit.length === 0) {
+                vscode.window.showInformationMessage('Nothing to commit. No modified files found.');
+                return '';
+            }
+
+            let commitMessage = '';
+
+            return commitMessage;
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error during commit: ${error}`);
+            return '';
+        }
     }
 }

@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
+import { AiMode, TddPhase, TddState } from '../models/tdd-models';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -234,5 +235,25 @@ diff --git a/file.ts b/file.ts
 
         assert.strictEqual(result, '');
         assert.ok(getRecentCommitsStub.calledOnceWith(1));
+    });
+
+    test('Should handle no modified files in commit', async () => {
+        const mockState: TddState = {
+            currentPhase: TddPhase.GREEN,
+            currentMode: AiMode.ASK,
+            testProposals: [],
+            userStories: [],
+            refactoringSuggestions: [],
+        };
+        const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
+        getModifiedFilesStub.resolves('');
+
+        const showInformationMessageSpy = sinon.spy(vscode.window, 'showInformationMessage');
+
+        const result = await codeAnalysisService.commitChanges(mockState);
+
+        assert.strictEqual(result, '');
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(showInformationMessageSpy.calledWith('Nothing to commit. No modified files found.'));
     });
 });
