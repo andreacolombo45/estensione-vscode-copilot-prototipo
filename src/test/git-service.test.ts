@@ -100,4 +100,19 @@ suite('GitService Test Suite', () => {
         assert.strictEqual(output, expectedOutput);
         assert.ok(execStub.calledWith('git show abc123', sinon.match.has('cwd', gitService['workspacePath'])));
     });
+
+    test('Should get files changed in commit', async () => {
+        const execStub = sinon.stub();
+        execStub.onCall(0).resolves({ stdout: 'true' });
+        execStub.onCall(1).resolves({
+            stdout: 'src/file1.ts\ntest/test1.spec.ts\n'
+        });
+
+        const gitService = await GitService.create(execStub);
+        assert.ok(gitService instanceof GitService);
+
+        const files = await gitService.getModifiedFiles();
+        assert.strictEqual(files, 'src/file1.ts\ntest/test1.spec.ts\n');
+        assert.ok(execStub.calledWith('git status --porcelain', sinon.match.has('cwd', gitService['workspacePath'])));
+    });
 });

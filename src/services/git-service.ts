@@ -85,4 +85,9 @@ export class GitService {
         const { stdout } = await this.execFn(`git show ${args.join(' ')}`, { cwd: this.workspacePath });
         return stdout;
     }
+
+    public async getModifiedFiles(): Promise<string> {
+        const { stdout } = await this.execFn('git status --porcelain', { cwd: this.workspacePath });
+        return stdout;
+    }
 }
