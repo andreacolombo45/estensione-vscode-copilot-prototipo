@@ -250,9 +250,8 @@ diff --git a/file.ts b/file.ts
 
         const showInformationMessageSpy = sinon.spy(vscode.window, 'showInformationMessage');
 
-        const result = await codeAnalysisService.commitChanges(mockState);
-
-        assert.strictEqual(result, '');
+        await codeAnalysisService.commitChanges(mockState);
+        
         assert.ok(getModifiedFilesStub.calledOnce);
         assert.ok(showInformationMessageSpy.calledWith('Nothing to commit. No modified files found.'));
     });
@@ -280,9 +279,8 @@ diff --git a/file.ts b/file.ts
         const commitFilesStub = gitServiceStub.commitFiles as sinon.SinonStub;
         commitFilesStub.resolves();
 
-        const result = await codeAnalysisService.commitChanges(mockState);
+        await codeAnalysisService.commitChanges(mockState);
 
-        assert.strictEqual(result, 'GREEN: Implement feature X');
         assert.ok(getModifiedFilesStub.calledOnce);
         assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'GREEN: Implement feature X'));
     });
@@ -303,9 +301,8 @@ diff --git a/file.ts b/file.ts
         const commitFilesStub = gitServiceStub.commitFiles as sinon.SinonStub;
         commitFilesStub.resolves();
 
-        const result = await codeAnalysisService.commitChanges(mockState, 'Refactor code');
+        await codeAnalysisService.commitChanges(mockState, 'Refactor code');
 
-        assert.strictEqual(result, 'REFACTORING: Refactor code');
         assert.ok(getModifiedFilesStub.calledOnce);
         assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'REFACTORING: Refactor code'));
     });

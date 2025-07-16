@@ -201,7 +201,7 @@ export class CodeAnalysisService {
             .map(line => line.slice(1));
     }
 
-    public async commitChanges(state: TddState, commitTitle?: string): Promise<string> {
+    public async commitChanges(state: TddState, commitTitle?: string): Promise<void> {
         try {
             const modifiedFiles = await this.gitService.getModifiedFiles();
             const filesToCommit = modifiedFiles
@@ -211,7 +211,6 @@ export class CodeAnalysisService {
             
             if (filesToCommit.length === 0) {
                 vscode.window.showInformationMessage('Nothing to commit. No modified files found.');
-                return '';
             }
 
             let commitMessage = '';
@@ -229,10 +228,8 @@ export class CodeAnalysisService {
             }
 
             await this.gitService.commitFiles(filesToCommit, commitMessage);
-            return commitMessage;
         } catch (error) {
             vscode.window.showErrorMessage(`Error during commit: ${error}`);
-            return '';
         }
     }
 }
