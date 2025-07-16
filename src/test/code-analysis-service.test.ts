@@ -285,5 +285,28 @@ diff --git a/file.ts b/file.ts
         assert.strictEqual(result, 'GREEN: Implement feature X');
         assert.ok(getModifiedFilesStub.calledOnce);
         assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'GREEN: Implement feature X'));
-    });1
+    });
+
+    test('Should commit changes with REFACTORING phase', async () => {
+        const mockState: TddState = {
+            currentPhase: TddPhase.REFACTORING,
+            currentMode: AiMode.ASK,
+            testProposals: [],
+            userStories: [],
+            refactoringSuggestions: [],
+        };
+
+        const modifiedFiles = ' M src/file1.ts\n M src/file2.ts\n';
+        const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
+        getModifiedFilesStub.resolves(modifiedFiles);
+
+        const commitFilesStub = gitServiceStub.commitFiles as sinon.SinonStub;
+        commitFilesStub.resolves();
+
+        const result = await codeAnalysisService.commitChanges(mockState, 'Refactor code');
+
+        assert.strictEqual(result, 'REFACTORING: Refactor code');
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'REFACTORING: Refactor code'));
+    });
 });

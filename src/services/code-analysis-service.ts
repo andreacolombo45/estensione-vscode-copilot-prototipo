@@ -220,6 +220,9 @@ export class CodeAnalysisService {
                 case TddPhase.GREEN:
                     commitMessage = `GREEN: ${state.selectedTest?.title || 'Implementazione funzionalità'}`;
                     break;
+                case TddPhase.REFACTORING:
+                    commitMessage = `REFACTORING: ${commitTitle || 'Refactoring del codice'}`;
+                    break;
                 default:
                     commitMessage = `${state.currentPhase.toUpperCase()}: ${state.selectedTest?.title || 'Implementazione di test'}`;
                     break;
