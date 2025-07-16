@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { TddPhase, TddState, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
 import { TddStateManager } from '../services/tdd-state-manager';
 import { AiService } from '../services/ai-service';
-import { GitService } from '../services/git-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 
 export class TddInteractionView implements vscode.WebviewViewProvider {
@@ -114,6 +113,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     this._stateManager.setTestResults(testResults.success, testResults.message);
                     
                     if (testResults.success) {
+                        await this._codeAnalysisService.commitChanges(this._stateManager.state);
                         this._stateManager.setPhase(TddPhase.REFACTORING);
                         
                         const refactoringSuggestions = await this._aiService.generateRefactoringSuggestions();

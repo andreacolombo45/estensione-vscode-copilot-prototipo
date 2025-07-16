@@ -35,7 +35,8 @@ suite('TddInteractionView Test Suite', () => {
         const codeAnalysisServiceStub = {
             getProjectStructure: sinon.stub().resolves({ files: [], folders: [] }),
             getCommitHistory: sinon.stub().resolves({ commits: [] }),
-            insertTestCode: sinon.stub().resolves(true)
+            insertTestCode: sinon.stub().resolves(true),
+            commitChanges: sinon.stub().resolves()
         } as any as CodeAnalysisService;
 
         sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
@@ -123,6 +124,7 @@ suite('TddInteractionView Test Suite', () => {
         const setRefactoringSuggestionsSpy = sinon.spy(stateManager, 'setRefactoringSuggestions');
         const generateRefactoringSuggestionsStub = sinon.stub(aiService, 'generateRefactoringSuggestions')
             .resolves([{ id: 'refactor1', title: 'Refactor 1', description: 'Refactor description' }]);
+        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -137,6 +139,7 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setPhaseSpy.calledWith(TddPhase.REFACTORING));
         assert.ok(generateRefactoringSuggestionsStub.calledOnce);
         assert.ok(setRefactoringSuggestionsSpy.calledWith([{ id: 'refactor1', title : 'Refactor 1', description: 'Refactor description' }]));
+        assert.ok(commitChangesStub.calledOnce);
     });
 
     test("Should handle refreshUserStories message", async () => {
