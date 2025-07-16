@@ -216,6 +216,16 @@ export class CodeAnalysisService {
 
             let commitMessage = '';
 
+            switch (state.currentPhase) {
+                case TddPhase.GREEN:
+                    commitMessage = `GREEN: ${state.selectedTest?.title || 'Implementazione funzionalità'}`;
+                    break;
+                default:
+                    commitMessage = `${state.currentPhase.toUpperCase()}: ${state.selectedTest?.title || 'Implementazione di test'}`;
+                    break;
+            }
+
+            await this.gitService.commitFiles(filesToCommit, commitMessage);
             return commitMessage;
         } catch (error) {
             vscode.window.showErrorMessage(`Error during commit: ${error}`);

@@ -256,4 +256,34 @@ diff --git a/file.ts b/file.ts
         assert.ok(getModifiedFilesStub.calledOnce);
         assert.ok(showInformationMessageSpy.calledWith('Nothing to commit. No modified files found.'));
     });
+
+    test('Should commit changes with GREEN phase', async () => {
+        const mockState: TddState = {
+            currentPhase: TddPhase.GREEN,
+            currentMode: AiMode.ASK,
+            testProposals: [],
+            userStories: [],
+            refactoringSuggestions: [],
+            selectedTest: { 
+                id: 'test1',
+                title: 'Implement feature X',
+                description: 'This test implements feature X',
+                code: 'test code here',
+                targetFile: 'src/featureX.ts'
+            }
+        };
+
+        const modifiedFiles = ' M src/file1.ts\n M src/file2.ts\n';
+        const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
+        getModifiedFilesStub.resolves(modifiedFiles);
+
+        const commitFilesStub = gitServiceStub.commitFiles as sinon.SinonStub;
+        commitFilesStub.resolves();
+
+        const result = await codeAnalysisService.commitChanges(mockState);
+
+        assert.strictEqual(result, 'GREEN: Implement feature X');
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'GREEN: Implement feature X'));
+    });1
 });
