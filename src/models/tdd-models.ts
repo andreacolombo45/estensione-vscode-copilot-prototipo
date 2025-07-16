@@ -48,6 +48,7 @@ export interface TddState {
 
 export interface AiRequestOptions {
     model?: string;
+    problemRequirements?: string;
     maxTokens?: number;
     temperature?: number;
     systemPrompt?: string;

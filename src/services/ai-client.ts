@@ -25,10 +25,14 @@ export class AiClient {
             const messages: AiRequest[] = [];
 
             if (options.systemPrompt) {
+                let systemContent = options.systemPrompt;
+                if (options.problemRequirements) {
+                    systemContent += `\n\nRequisiti del problema: ${options.problemRequirements}`;
+                }
                 messages.push({
-                        role: 'system',
-                        content: options.systemPrompt
-                    });
+                    role: 'system',
+                    content: systemContent
+                });
             }
 
             messages.push({

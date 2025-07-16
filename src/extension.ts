@@ -29,6 +29,19 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     }
 
+    const problemRequirements = vscode.workspace.getConfiguration('tddMentorAI').get('problemRequirements', '');
+    if (!problemRequirements) {
+        const configAction = 'Configura Requisiti Problema';
+        const response = await vscode.window.showWarningMessage(
+            'Per utilizzare TDD-Mentor-AI è necessario specificare i requisiti del problema.',
+            configAction
+        );
+
+        if (response === configAction) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'tddMentorAI.problemRequirements');
+        }
+    }
+
     let gitService: GitService | null = null;
     let codeAnalysisService: CodeAnalysisService | null = null;
     let aiService: AiService;

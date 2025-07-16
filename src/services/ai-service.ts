@@ -39,6 +39,7 @@ export class AiService {
                 userPrompt, 
                 {
                 systemPrompt: config.systemPrompt,
+                problemRequirements: vscode.workspace.getConfiguration('tddMentorAI').get('problemRequirements', ''),
                 model: config.modelOptions?.model,
                 maxTokens: config.modelOptions?.maxTokens,
                 temperature: config.modelOptions?.temperature,

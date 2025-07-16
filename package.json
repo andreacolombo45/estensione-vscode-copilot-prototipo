@@ -93,6 +93,12 @@
           "default": "",
           "description": "API key di OpenAI per le funzionalità di intelligenza artificiale",
           "scope": "machine-overridable"
+        }, 
+        "tddMentorAI.problemRequirements": {
+          "type": "string",
+          "default": "",
+          "description": "Requisiti del problema da utilizzare nelle richieste AI",
+          "scope": "machine-overridable"
         }
       }
     }
