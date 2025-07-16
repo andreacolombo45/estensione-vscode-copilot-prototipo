@@ -115,4 +115,19 @@ suite('GitService Test Suite', () => {
         assert.strictEqual(files, 'src/file1.ts\ntest/test1.spec.ts\n');
         assert.ok(execStub.calledWith('git status --porcelain', sinon.match.has('cwd', gitService['workspacePath'])));
     });
+
+    test('Should commits correctly', async () => {
+        const execStub = sinon.stub();
+        execStub.onCall(0).resolves({ stdout: 'true' });
+        execStub.onCall(1).resolves({ stdout: 'src/file1.ts\ntest/test1.spec.ts\n' });
+        execStub.onCall(2).resolves({ stdout: 'true' });
+
+        const gitService = await GitService.create(execStub);
+        assert.ok(gitService instanceof GitService);
+
+        await gitService.commitFiles(['src/file1.ts'], 'Test commit message');
+
+        sinon.assert.calledWith(execStub, 'git add "src/file1.ts"', sinon.match.has('cwd', gitService['workspacePath']));
+        sinon.assert.calledWith(execStub, 'git commit -m "Test commit message"', sinon.match.has('cwd', gitService['workspacePath']));
+    });
 });
