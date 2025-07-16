@@ -31,13 +31,17 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         });
     }
 
-    public static async create(extensionUri: vscode.Uri): Promise<TddInteractionView> {
-        const gitService = await GitService.create();
-        if (!gitService) {
-            throw new Error('Git service could not be initialized. Please ensure you have a valid Git repository.');
+    public static async create(
+        extensionUri: vscode.Uri,
+        aiService: AiService,
+        codeAnalysisService: CodeAnalysisService
+    ): Promise<TddInteractionView> {
+        if (!aiService) {
+            throw new Error('AI Service is not initialized.');
         }
-        const codeAnalysisService = CodeAnalysisService.getInstance(gitService);
-        const aiService = await AiService.getInstance(undefined, codeAnalysisService);
+        if (!codeAnalysisService) {
+            throw new Error('Code Analysis Service is not initialized.');
+        }
         return new TddInteractionView(extensionUri, aiService, codeAnalysisService);
     }
 
@@ -151,11 +155,11 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
 
         const state = this._stateManager.state;
         
-        if (state.currentPhase === TddPhase.PICK && state.userStories.length === 0) {
-            const userStories = await this._aiService.generateUserStories();
-            this._stateManager.setUserStories(userStories);
-        }
-        
+        //if (state.currentPhase === TddPhase.PICK && state.userStories.length === 0) {
+        //    const userStories = await this._aiService.generateUserStories();
+        //    this._stateManager.setUserStories(userStories);
+        //}
+
         this._view.webview.html = await this._getHtmlForWebview(state);
     }
 

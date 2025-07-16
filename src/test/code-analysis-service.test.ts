@@ -225,4 +225,14 @@ diff --git a/file.ts b/file.ts
         assert.ok(getRecentCommitsStub.calledOnceWith(1));
         assert.ok(showCommitDetailsStub.calledOnceWith(['abc123']));
     });
+
+    test('Should handle no recent commits', async () => {
+        const getRecentCommitsStub = gitServiceStub.getRecentCommits as sinon.SinonStub;
+        getRecentCommitsStub.resolves([]);
+
+        const result = await codeAnalysisService.getImplementedCode();
+
+        assert.strictEqual(result, '');
+        assert.ok(getRecentCommitsStub.calledOnceWith(1));
+    });
 });

@@ -39,22 +39,22 @@ suite('AiClient Test Suite', () => {
 
         fetchStub.resolves(mockResponse);
 
-        const response = await aiClient.sendRequest("test prompt", { model: "gpt-3.5-turbo" });
+        const response = await aiClient.sendRequest("test prompt", { model: "deepseek/deepseek-chat-v3-0324:free" });
         assert.ok(fetchStub.calledOnce);
 
         const fetchArgs = fetchStub.getCall(0);
         const url = fetchArgs.args[0];
         const options = fetchArgs.args[1];
 
-        assert.strictEqual(url, "https://api.openai.com/v1/chat/completions");
+        assert.strictEqual(url, "https://openrouter.ai/api/v1/chat/completions");
         assert.strictEqual(options.method, "POST");
         assert.strictEqual(options.headers['Content-Type'], 'application/json');
         assert.strictEqual(options.headers['Authorization'], 'Bearer test-api-key');
 
         const body = JSON.parse(options.body);
-        assert.strictEqual(body.model, "gpt-3.5-turbo");
+        assert.strictEqual(body.model, "deepseek/deepseek-chat-v3-0324:free");
         assert.strictEqual(body.temperature, 0.7);
-        assert.strictEqual(body.max_tokens, 2000);
+        assert.strictEqual(body.max_tokens, 1000);
         assert.deepStrictEqual(body.messages, [{
             role: "user",
             content: "test prompt"
@@ -67,8 +67,8 @@ suite('AiClient Test Suite', () => {
         const mockErrorResponse = new Response("Not Found", { status: 404 });
         fetchStub.resolves(mockErrorResponse);
 
-        await assert.rejects(() => aiClient.sendRequest("test prompt", { model: "gpt-3.5-turbo" }), {
-            message: "AI request failed: 404 Not Found"
+        await assert.rejects(() => aiClient.sendRequest("test prompt", { model: "deepseek/deepseek-chat-v3-0324:free" }), {
+            message: "AI request failed (404): Not Found"
         });
     });
 

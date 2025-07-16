@@ -12,6 +12,7 @@ suite('AiService Test Suite', () => {
     let getProjectStructureStub: sinon.SinonStub;
     let getCommitHistoryStub: sinon.SinonStub;
     let workspaceConfigStub: sinon.SinonStub;
+    let codeAnalysisServiceStub: CodeAnalysisService;
 
     const mockUserStories = [
         {
@@ -136,11 +137,11 @@ suite('AiService Test Suite', () => {
         const getCommitHistoryStub = sinon.stub().resolves({ commits: [] });
         const getImplementedCodeStub = sinon.stub().resolves({ code: '' });
 
-        const codeAnalysisServiceStub = {
+        codeAnalysisServiceStub = {
             getProjectStructure: getProjectStructureStub,
             getCommitHistory: getCommitHistoryStub,
             getImplementedCode: getImplementedCodeStub
-        } as any as CodeAnalysisService;
+        } as any;
 
         sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
 
@@ -148,7 +149,7 @@ suite('AiService Test Suite', () => {
             sendRequest: sendRequestStub,
         } as any as AiClient;
 
-        aiService = await AiService.getInstance(aiClientStub, codeAnalysisServiceStub);
+        aiService = await AiService.getInstance(codeAnalysisServiceStub, aiClientStub);
     });
 
     teardown(() => {
@@ -156,8 +157,8 @@ suite('AiService Test Suite', () => {
     });
 
     test('Should return singleton instance', async () => {
-        const instance1 = await AiService.getInstance();
-        const instance2 = await AiService.getInstance();
+        const instance1 = await AiService.getInstance(codeAnalysisServiceStub);
+        const instance2 = await AiService.getInstance(codeAnalysisServiceStub);
         assert.strictEqual(instance1, instance2);
     });
 

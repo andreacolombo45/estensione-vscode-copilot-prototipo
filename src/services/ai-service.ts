@@ -3,7 +3,6 @@ import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-mo
 import { AiClient } from './ai-client';
 import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
-import { GitService } from './git-service';
 
 type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion;
 
@@ -15,16 +14,13 @@ export class AiService {
         private readonly configs: typeof aiConfigs
     ) {}
 
-    public static async getInstance(aiClient?: AiClient, codeAnalysisService?: CodeAnalysisService): Promise<AiService> {
+    public static async getInstance(codeAnalysisService: CodeAnalysisService, aiClient?: AiClient): Promise<AiService> {
         if (!AiService.instance) {
-            const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
-            const finalAiClient = aiClient || new AiClient(apikey);
-            const gitService = await GitService.create();   
-            if (!gitService) {
-                throw new Error('Git service could not be initialized. Please ensure you have a valid Git repository.');
+            if (!aiClient) {
+                const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+                aiClient = new AiClient(apikey);
             }
-            const finalCodeAnalysisService = codeAnalysisService || CodeAnalysisService.getInstance(gitService);
-            AiService.instance = new AiService(finalAiClient, finalCodeAnalysisService, aiConfigs);
+            AiService.instance = new AiService(aiClient, codeAnalysisService, aiConfigs);
         }
         return AiService.instance;
     }
@@ -43,6 +39,7 @@ export class AiService {
                 userPrompt, 
                 {
                 systemPrompt: config.systemPrompt,
+                problemRequirements: vscode.workspace.getConfiguration('tddMentorAI').get('problemRequirements', ''),
                 model: config.modelOptions?.model,
                 maxTokens: config.modelOptions?.maxTokens,
                 temperature: config.modelOptions?.temperature,
@@ -71,7 +68,7 @@ export class AiService {
 
         try {
             const config = this.configs[type];
-            const selectionPrompt = config.selectionPrompt;
+            const selectionPrompt = `${config.selectionPrompt} ${JSON.stringify(items)}`;
 
             const response = await this.aiClient.sendRequest<{ items: T[] }>(
                 selectionPrompt,
@@ -81,7 +78,6 @@ export class AiService {
                     temperature: 0.3,
                     context: {
                         ...context,
-                        items
                     }
                 }
             );
@@ -100,11 +96,17 @@ export class AiService {
     private async getProjectContext(): Promise<any> {
         try {
             const projectStructure = await this.codeAnalysisService.getProjectStructure();
-            const commitHistory = await this.codeAnalysisService.getCommitHistory();
+            const commitHistory = await this.codeAnalysisService.getCommitHistory(3);
 
             return {
-                projectStructure,
-                commitHistory
+                language: projectStructure.language,
+                hasTests: projectStructure.hasTests,
+                testFiles: projectStructure.testFiles.slice(0, 5).map(f => f.split('/').pop()),
+                sourceFiles: projectStructure.sourceFiles.slice(0, 5).map(f => f.split('/').pop()),
+                recentCommits: commitHistory.map(commit => ({
+                    date: commit.date,
+                    message: commit.message
+                }))
             };
         } catch (error) {
             vscode.window.showErrorMessage(`Error during workspace analysis: ${error}`);

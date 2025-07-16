@@ -6,36 +6,95 @@ import { TddStateManager } from './services/tdd-state-manager';
 import { AiService } from './services/ai-service';
 import { CodeAnalysisService } from './services/code-analysis-service';
 import { GitService } from './services/git-service';
+import { AiClient } from './services/ai-client';
 
 export async function activate(context: vscode.ExtensionContext) {
 
 	console.log('Estensione "TDD-Mentor-AI" attivata!');
 
     const stateManager = TddStateManager.getInstance();
-    const aiService = await AiService.getInstance();
-    const gitService = await GitService.create();
-    if (!gitService) {
-		console.warn('Git not initialized.');
-		return;
-	}
-    const codeAnalysisService = CodeAnalysisService.getInstance(gitService);
+    let tddInteractionViewProvider: TddInteractionView | undefined;
+    let tddCycleViewProvider: TddCycleView | undefined;
 
-    const tddCycleViewProvider = new TddCycleView(context.extensionUri);
-    const tddInteractionViewProvider = await TddInteractionView.create(context.extensionUri);
+    const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+    if (!apikey) {
+        const configAction = 'Configura API Key';
+        const response = await vscode.window.showWarningMessage(
+            'Per utilizzare TDD-Mentor-AI è necessaria una API key di OpenAI.',
+            configAction
+        );
+        
+        if (response === configAction) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'tddMentorAI.openaiApiKey');
+        }
+    }
 
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            TddCycleView.viewType,
-            tddCycleViewProvider
-        )
-    );
+    const problemRequirements = vscode.workspace.getConfiguration('tddMentorAI').get('problemRequirements', '');
+    if (!problemRequirements) {
+        const configAction = 'Configura Requisiti Problema';
+        const response = await vscode.window.showWarningMessage(
+            'Per utilizzare TDD-Mentor-AI è necessario specificare i requisiti del problema.',
+            configAction
+        );
 
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            TddInteractionView.viewType,
-            tddInteractionViewProvider
-        )
-    );
+        if (response === configAction) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'tddMentorAI.problemRequirements');
+        }
+    }
+
+    let gitService: GitService | null = null;
+    let codeAnalysisService: CodeAnalysisService | null = null;
+    let aiService: AiService;
+
+    try {
+        gitService = await GitService.create();
+        if (!gitService) {
+            const initGitAction = 'Inizializza Git';
+            const response = await vscode.window.showWarningMessage(
+                'TDD-Mentor-AI richiede un repository Git. Alcune funzionalità saranno limitate.',
+                initGitAction
+            );
+            
+            if (response === initGitAction) {
+                vscode.commands.executeCommand('git.init');
+            }
+        } else {
+            codeAnalysisService = CodeAnalysisService.getInstance(gitService);
+            
+            const aiClient = new AiClient(apikey);
+            aiService = await AiService.getInstance(codeAnalysisService, aiClient);
+
+            tddCycleViewProvider = new TddCycleView(context.extensionUri);
+
+            try {
+                if (aiService && codeAnalysisService) {
+                    tddInteractionViewProvider = await TddInteractionView.create(context.extensionUri, aiService, codeAnalysisService);
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Errore durante la creazione della vista di interazione TDD: ${error}`);
+            }
+        }
+    } catch (error) {
+        vscode.window.showErrorMessage(`Errore durante l'inizializzazione dei servizi: ${error}`);
+    }
+
+    if (tddCycleViewProvider) {
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                TddCycleView.viewType,
+                tddCycleViewProvider
+            )
+        );
+    }
+
+    if (tddInteractionViewProvider) {
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                TddInteractionView.viewType,
+                tddInteractionViewProvider
+            )
+        );
+    }
 
     context.subscriptions.push(
         vscode.commands.registerCommand('tdd-mentor-ai.start', () => {

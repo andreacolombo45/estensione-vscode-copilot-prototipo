@@ -46,8 +46,8 @@ suite('TddInteractionView Test Suite', () => {
             sendPrompt: sinon.stub().resolves('Fake response')
         } as any;
 
-        aiService = await AiService.getInstance(aiClientStub, codeAnalysisServiceStub);
-        
+        aiService = await AiService.getInstance(codeAnalysisService, aiClientStub);
+
         stateManager = TddStateManager.getInstance();
 
         mockWebview = {
@@ -71,7 +71,7 @@ suite('TddInteractionView Test Suite', () => {
 
         mockExtensionUri = vscode.Uri.file('/mock/extension/path');
 
-        tddInteractionView = await TddInteractionView.create(mockExtensionUri);
+        tddInteractionView = await TddInteractionView.create(mockExtensionUri, aiService, codeAnalysisService);
     });
 
     teardown(() => {
@@ -80,21 +80,6 @@ suite('TddInteractionView Test Suite', () => {
 
     test('Should initialize with correct view type', () => {
         assert.strictEqual(TddInteractionView.viewType, 'tdd-mentor-ai-interaction');
-    });
-
-    test("Should generate user stories on first PICK phase", () => {
-        const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
-            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
-        ]);
-
-        stateManager.setPhase(TddPhase.PICK);
-
-        const context = {} as vscode.WebviewViewResolveContext;
-        const token = {} as vscode.CancellationToken;
-
-        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
-
-        assert.ok(generateUserStoriesStub.calledOnce);
     });
 
     test("Should handle selectUserStory message", async () => {

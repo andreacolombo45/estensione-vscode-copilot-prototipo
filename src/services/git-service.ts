@@ -41,25 +41,38 @@ export class GitService {
     }
 
     public async getRecentCommits(limit: number = 10): Promise<CommitInfo[]> {
-        const logCmd = `git log -${limit} --pretty=format:"%H|%an|%at|%s"`;
-        const { stdout } = await this.execFn(logCmd, { cwd: this.workspacePath });
+        try {
+            
+            try {
+                await this.execFn('git rev-parse --verify HEAD', { cwd: this.workspacePath });
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to get revision count: ${error}`);
+                return [];
+            }
 
-        const lines = stdout.trim().split('\n');
-        const commits: CommitInfo[] = [];
+            const logCmd = `git log -${limit} --pretty=format:"%H|%an|%at|%s"`;
+            const { stdout } = await this.execFn(logCmd, { cwd: this.workspacePath });
 
-        for (const line of lines) {
-            const [hash, author, timestamp, subject] = line.split('|');
-            const files = await this.getFilesChangedInCommit(hash);
-            commits.push({
-                hash,
-                author,
-                date: new Date(parseInt(timestamp) * 1000), 
-                message: subject,
-                filesChanged: files
-            });
+            const lines = stdout.trim().split('\n');
+            const commits: CommitInfo[] = [];
+
+            for (const line of lines) {
+                const [hash, author, timestamp, subject] = line.split('|');
+                const files = await this.getFilesChangedInCommit(hash);
+                commits.push({
+                    hash,
+                    author,
+                    date: new Date(parseInt(timestamp) * 1000), 
+                    message: subject,
+                    filesChanged: files
+                });
+            }
+
+            return commits;
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to get recent commits: ${error}`);
+            return [];
         }
-
-        return commits;
     }
 
     private async getFilesChangedInCommit(hash: string): Promise<string[]> {
