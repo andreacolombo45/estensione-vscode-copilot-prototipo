@@ -4,9 +4,6 @@ import { TddStateManager } from '../services/tdd-state-manager';
 import { AiService } from '../services/ai-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 
-/**
- * WebView che gestisce l'interazione con il mentor AI
- */
 export class TddInteractionView implements vscode.WebviewViewProvider {
     public static readonly viewType = 'tdd-mentor-ai-interaction';
     
@@ -16,18 +13,35 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     private readonly _aiService: AiService;
     private readonly _codeAnalysisService: CodeAnalysisService;
 
-    constructor(extensionUri: vscode.Uri) {
+    private constructor(
+        extensionUri: vscode.Uri,
+        aiService: AiService,
+        codeAnalysisService: CodeAnalysisService
+    ) {
         this._extensionUri = extensionUri;
         this._stateManager = TddStateManager.getInstance();
-        this._aiService = AiService.getInstance();
-        this._codeAnalysisService = CodeAnalysisService.getInstance();
-        
-        // Registra listener per i cambiamenti di stato
+        this._aiService = aiService;
+        this._codeAnalysisService = codeAnalysisService;
+
         this._stateManager.onStateChanged(() => {
             if (this._view) {
                 this._updateView();
             }
         });
+    }
+
+    public static async create(
+        extensionUri: vscode.Uri,
+        aiService: AiService,
+        codeAnalysisService: CodeAnalysisService
+    ): Promise<TddInteractionView> {
+        if (!aiService) {
+            throw new Error('AI Service is not initialized.');
+        }
+        if (!codeAnalysisService) {
+            throw new Error('Code Analysis Service is not initialized.');
+        }
+        return new TddInteractionView(extensionUri, aiService, codeAnalysisService);
     }
 
     public resolveWebviewView(
@@ -37,16 +51,13 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
-        // Configura il webview
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
         };
 
-        // Imposta il contenuto iniziale
         this._updateView();
 
-        // Gestisce i messaggi dal webview
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.command) {
                 case 'selectUserStory':
@@ -54,7 +65,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         this._stateManager.selectUserStory(data.storyId);
                         this._stateManager.setPhase(TddPhase.RED);
                         
-                        // Genera proposte di test per la storia selezionata
                         const state = this._stateManager.state;
                         if (state.selectedUserStory) {
                             const testProposals = await this._aiService.generateTestProposals(state.selectedUserStory);
@@ -66,51 +76,94 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 case 'selectTestProposal':
                     if (data.testId) {
                         this._stateManager.selectTestProposal(data.testId);
-                        this._stateManager.setPhase(TddPhase.GREEN);
-                        
-                        // Inserisci il test nel file appropriato
                         const state = this._stateManager.state;
                         if (state.selectedTest) {
-                            const success = await this._codeAnalysisService.insertTestCode(
-                                state.selectedTest.code,
-                                state.selectedTest.targetFile || 'test.js'
+                            this._stateManager.setTestEditingMode(
+                                true
                             );
-                            
-                            if (!success) {
-                                vscode.window.showErrorMessage('Non è stato possibile inserire il codice di test nel file.');
-                            }
                         }
                     }
                     break;
+                
+                case 'confirmTestCode':
+                    if (data.testCode && data.targetFile) {
+                        this._stateManager.updateModifiedSelectedTest(data.testCode, data.targetFile);
+                        
+                        const success = await this._codeAnalysisService.insertTestCode(
+                            data.testCode,
+                            data.targetFile
+                        );
+
+                        if (success) {
+                            this._stateManager.setTestEditingMode(false);
+                            this._stateManager.setPhase(TddPhase.GREEN);
+                        } else {
+                            vscode.window.showErrorMessage('Non è stato possibile inserire il codice di test nel file.');
+                        }
+                    }
+                    break;
+                
+                case 'cancelEditTest':
+                    this._stateManager.setTestEditingMode(false);
+                    this._stateManager.setPhase(TddPhase.RED);
+                    break;
                     
                 case 'verifyTests':
-                    // Esegui i test e verifica i risultati
                     const testResults = await this._aiService.verifyTests();
                     this._stateManager.setTestResults(testResults.success, testResults.message);
                     
-                    // Se i test hanno successo, passa alla fase di refactoring
                     if (testResults.success) {
+                        await this._codeAnalysisService.commitChanges(this._stateManager.state);
                         this._stateManager.setPhase(TddPhase.REFACTORING);
                         
-                        // Genera suggerimenti di refactoring
                         const refactoringSuggestions = await this._aiService.generateRefactoringSuggestions();
                         this._stateManager.setRefactoringSuggestions(refactoringSuggestions);
                     }
                     break;
                     
                 case 'completePhase':
-                    // Completa la fase corrente e torna alla fase PICK
-                    this._stateManager.setPhase(TddPhase.PICK);
-                    
-                    // Genera nuove user stories
-                    const userStories = await this._aiService.generateUserStories();
-                    this._stateManager.setUserStories(userStories);
+                    try {
+                        const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+                        const filesToCommit = modifiedFiles
+                            .split('\n')
+                            .filter(line => line.trim() !== '')
+                            .map(line => line.substring(3)); 
+                        
+                        if (filesToCommit.length > 0) {
+                            const commitTitle = await vscode.window.showInputBox({
+                                prompt: 'Inserisci il titolo del commit',
+                                placeHolder: 'Titolo del commit'
+                            });
+
+                            if (commitTitle) {
+                                await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
+
+                                this._stateManager.setPhase(TddPhase.PICK);
+                                
+                                const userStories = await this._aiService.generateUserStories();
+                                this._stateManager.setUserStories(userStories);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error getting modified files:', error);
+                    }
                     break;
                     
                 case 'refreshUserStories':
-                    // Genera nuove user stories
                     const stories = await this._aiService.generateUserStories();
                     this._stateManager.setUserStories(stories);
+                    break;
+                
+                case 'refreshTestProposals':
+                    if (this._stateManager.state.selectedUserStory) {
+                        const proposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
+                        this._stateManager.setTestProposals(proposals);
+                    }
+                    break;
+
+                case 'refreshRefactoringSuggestions':
+                    const suggestions = await this._aiService.generateRefactoringSuggestions();
+                    this._stateManager.setRefactoringSuggestions(suggestions);
                     break;
             }
         });
@@ -123,17 +176,15 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
 
         const state = this._stateManager.state;
         
-        // Se è la prima volta che si carica la vista nella fase PICK, genera user stories
-        if (state.currentPhase === TddPhase.PICK && state.userStories.length === 0) {
-            const userStories = await this._aiService.generateUserStories();
-            this._stateManager.setUserStories(userStories);
-        }
-        
+        //if (state.currentPhase === TddPhase.PICK && state.userStories.length === 0) {
+        //    const userStories = await this._aiService.generateUserStories();
+        //    this._stateManager.setUserStories(userStories);
+        //}
+
         this._view.webview.html = await this._getHtmlForWebview(state);
     }
 
     private async _getHtmlForWebview(state: TddState): Promise<string> {
-        // Contenuto specifico per ogni fase
         let phaseContent = '';
         
         switch (state.currentPhase) {
@@ -146,7 +197,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 break;
                 
             case TddPhase.GREEN:
-                phaseContent = this._getGreenPhaseHtml(state.selectedTest);
+                phaseContent = this._getGreenPhaseHtml(state.modifiedSelectedTest);
                 break;
                 
             case TddPhase.REFACTORING:
@@ -274,13 +325,43 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     margin-left: auto;
                     background: none;
                     border: none;
-                    color: var(--vscode-button-background);
+                    color: var(--vscode-foreground);
                     cursor: pointer;
                     font-size: 1em;
                 }
                 
                 .refresh-btn:hover {
                     color: var(--vscode-button-hoverBackground);
+                }
+
+                .tooltip {
+                    position: relative;
+                    display: inline-block;
+                }
+                
+                .tooltip .tooltip-text {
+                    visibility: hidden;
+                    width: 100px;
+                    background-color: var(--vscode-editorHoverWidget-background);
+                    color: var(--vscode-editorHoverWidget-foreground);
+                    text-align: center;
+                    border-radius: 4px;
+                    padding: 5px;
+                    position: absolute;
+                    z-index: 1;
+                    bottom: 125%;
+                    right: 0;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    font-size: 0.8em;
+                    pointer-events: none;
+                    border: 1px solid var(--vscode-editorHoverWidget-border);
+                    white-space: nowrap;
+                }
+                
+                .tooltip:hover .tooltip-text {
+                    visibility: visible;
+                    opacity: 1;
                 }
             </style>
         </head>
@@ -321,6 +402,35 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         command: 'refreshUserStories'
                     });
                 }
+
+                function refreshTestProposals() {
+                    vscode.postMessage({
+                        command: 'refreshTestProposals'
+                    });
+                }
+
+                function refreshRefactoringSuggestions() {
+                    vscode.postMessage({
+                        command: 'refreshRefactoringSuggestions'
+                    });
+                }
+
+                function cancelEditTest() {
+                    vscode.postMessage({
+                        command: 'cancelEditTest'
+                    });
+                }
+                
+                function confirmTestCode() {
+                    const testCode = document.getElementById('testCode').value;
+                    const targetFile = document.getElementById('targetFile').value;
+                    
+                    vscode.postMessage({
+                        command: 'confirmTestCode',
+                        testCode: testCode,
+                        targetFile: targetFile
+                    });
+                }
             </script>
         </body>
         </html>
@@ -347,7 +457,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="phase-header">
             <span class="phase-emoji">📋</span>
             <h1>Fase PICK - Scegli una User Story</h1>
-            <button class="refresh-btn" onclick="refreshUserStories()">🔄</button>
+            <button class="refresh-btn tooltip" onclick="refreshUserStories()">
+                ⟳
+                <span class="tooltip-text">Ricarica Stories</span>
+            </button>
         </div>
         
         <p>Seleziona una delle seguenti user stories per iniziare il ciclo TDD:</p>
@@ -361,6 +474,12 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             return '<div>Nessuna user story selezionata. Torna alla fase PICK.</div>';
         }
         
+        const state = this._stateManager.state;
+
+        if (state.isEditingTest && state.selectedTest) {
+            return this._getTestEditingHtml(state.selectedTest, state.selectedTest.code, state.selectedTest.targetFile || 'test.js');
+        }
+
         let proposalsHtml = '';
         
         if (testProposals.length === 0) {
@@ -382,6 +501,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="phase-header">
             <span class="phase-emoji">🔴</span>
             <h1>Fase RED - Scegli un Test</h1>
+            <button class="refresh-btn tooltip" onclick="refreshTestProposals()">
+                ⟳
+                <span class="tooltip-text">Ricarica Test</span>
+            </button>
         </div>
         
         <h2>User Story selezionata: ${selectedUserStory.title}</h2>
@@ -390,6 +513,131 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <p>Seleziona uno dei seguenti test proposti:</p>
         
         ${proposalsHtml}
+        `;
+    }
+
+    private _getTestEditingHtml(selectedTest: TestProposal, editingCode?: string, editingFile?: string): string {
+        const testCode = editingCode || selectedTest.code;
+        const targetFile = editingFile || selectedTest.targetFile || 'test.js';
+
+        return `
+        <div class="phase-header">
+            <span class="phase-emoji">✏️</span>
+            <h1>Fase RED - Modifica Test</h1>
+        </div>
+
+        <h2>Test selezionato: ${selectedTest.title}</h2>
+        <p>${selectedTest.description}</p>
+
+        <div class="edit-container">
+            <div class="form-group">
+                <label for="testCode">Codice del test:</label>
+                <textarea
+                id="testCode"
+        class="code-editor"
+        rows="15"
+        placeholder="Modifica il codice del test..."
+                >${this._escapeHtml(testCode)}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="targetFile">File di destinazione:</label>
+                <input
+                type="text"
+        id="targetFile"
+        value="${targetFile}"
+        class="file-input"
+        placeholder="Percorso del file di test"
+                >
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="confirmTestCode()">
+                    ✅ Conferma e Inserisci
+                </button>
+                <button class="btn btn-secondary" onclick="cancelEditTest()">
+                    ❌ Annulla
+                </button>
+            </div>
+        </div>
+
+        <style>
+            .edit-container {
+            background-color: var(--vscode-input-background);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid var(--vscode-input-border);
+        }
+
+            .code-editor {
+            width: 100%;
+            min-height: 300px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            padding: 10px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+            .file-input {
+            width: 100%;
+            padding: 8px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+            .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--vscode-foreground);
+        }
+
+            .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+            .btn-primary {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+        }
+
+            .btn-primary:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+            .file-target {
+            font-size: 0.8em;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 8px;
+        }
+
+            .action-hint {
+            font-size: 0.75em;
+            color: var(--vscode-textLink-foreground);
+            font-style: italic;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+            .card:hover .action-hint {
+            color: var(--vscode-textLink-activeForeground);
+        }
+        </style>
         `;
     }
 
@@ -455,6 +703,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="phase-header">
             <span class="phase-emoji">🔄</span>
             <h1>Fase REFACTORING - Migliora il Codice</h1>
+            <button class="refresh-btn tooltip" onclick="refreshRefactoringSuggestions()">
+                ⟳
+                <span class="tooltip-text">Ricarica Refactoring</span>
+            </button>
         </div>
         
         <p>Ecco alcuni suggerimenti per migliorare il tuo codice:</p>

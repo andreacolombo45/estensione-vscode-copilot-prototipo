@@ -1,29 +1,106 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { CommitInfo, GitService } from './git-service';
+import { TddPhase, TddState } from '../models/tdd-models';
+import { exec } from 'child_process';
+import {promisify} from 'util';
 
-/**
- * Servizio per l'analisi del codice e l'interazione con i file del progetto
- */
+const IGNORED_DIRS = ['node_modules', '.git', '.vscode', 'dist', 'build', 'out'];
+
 export class CodeAnalysisService {
     private static instance: CodeAnalysisService;
+    private execPromise = promisify(exec);
 
-    private constructor() {
-        // Costruttore privato per il singleton
-    }
+    private constructor(private gitService: GitService) {}
 
-    public static getInstance(): CodeAnalysisService {
+    public static getInstance(gitService: GitService): CodeAnalysisService {
         if (!CodeAnalysisService.instance) {
-            CodeAnalysisService.instance = new CodeAnalysisService();
+            CodeAnalysisService.instance = new CodeAnalysisService(gitService);
         }
         return CodeAnalysisService.instance;
     }
 
-    /**
-     * Analizza il workspace corrente per comprendere la struttura del progetto
-     * @returns Informazioni sulla struttura del progetto
-     */
-    public async analyzeWorkspace(): Promise<{ 
+    public async insertTestCode(testCode: string, targetFile: string): Promise<boolean> {
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                throw new Error('Nessun workspace aperto');
+            }
+
+            const rootPath = workspaceFolders[0].uri.fsPath;
+            const allFiles = await this.getAllFiles(rootPath);
+
+            let testFilePath = allFiles.find(file =>
+                file.endsWith(targetFile) || path.basename(file) === targetFile
+            );
+
+            if (!testFilePath) {
+                testFilePath = path.join(rootPath, 'tests', targetFile);
+                const dir = path.dirname(testFilePath);
+
+                await fs.promises.mkdir(dir, { recursive: true });
+                await fs.promises.writeFile(testFilePath, '');
+            }
+
+            const currentContent = await fs.promises.readFile(testFilePath, 'utf8');
+
+            const updatedContent = `${currentContent.trim()}\n\n${testCode.trim()}\n`;
+
+            await fs.promises.writeFile(testFilePath, updatedContent);
+
+            const document = await vscode.workspace.openTextDocument(testFilePath);
+            await vscode.window.showTextDocument(document);
+            
+            return true;
+        } catch (error) {
+            vscode.window.showErrorMessage(`Errore durante l'inserimento del codice di test: ${error}`);
+            return false;
+        }
+    }
+    
+    public async runTests(): Promise<{ success: boolean; output: string }> {
+        try {
+            const { stdout, stderr } = await this.execPromise('npm test');
+            return { success: true, output: stdout || stderr };
+        } catch (err: any) {
+            return { success: false, output: err.message };
+        }
+    }
+
+    private async getAllFiles(dir: string): Promise<string[]> {
+        const results: string[] = [];
+        
+        try {
+            const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+            
+            const entryPromises = entries.map(async entry => {
+                
+                if (entry.isDirectory() && IGNORED_DIRS.includes(entry.name)) {
+                    return [];
+                }
+                
+                const fullPath = path.join(dir, entry.name);
+                
+                if (entry.isDirectory()) {
+                    return await this.getAllFiles(fullPath);
+                } else {
+                    return [fullPath];
+                }
+            });
+
+            const fileArrays = await Promise.all(entryPromises);
+
+            for (const fileArray of fileArrays) {
+                results.push(...fileArray);
+            }
+        } catch (error) {
+            console.error(`Errore durante la scansione della directory ${dir}:`, error);
+        }
+        return results;
+    }
+
+    public async getProjectStructure(): Promise<{ 
         language: string; 
         hasTests: boolean;
         testFiles: string[];
@@ -37,10 +114,8 @@ export class CodeAnalysisService {
 
             const rootPath = workspaceFolders[0].uri.fsPath;
             
-            // Ottieni tutti i file nel workspace
             const files = await this.getAllFiles(rootPath);
             
-            // Identifica file di test e sorgente
             const testFiles = files.filter(file => 
                 file.includes('.test.') || 
                 file.includes('.spec.') || 
@@ -48,52 +123,45 @@ export class CodeAnalysisService {
                 file.includes('/test/')
             );
             
-            // Determina il linguaggio principale del progetto
             const fileExtensions = files.map(file => path.extname(file).toLowerCase());
             const extensionCounts = new Map<string, number>();
             
             fileExtensions.forEach(ext => {
-                const count = extensionCounts.get(ext) || 0;
-                extensionCounts.set(ext, count + 1);
+                if (ext) {
+                    const count = extensionCounts.get(ext) || 0;
+                    extensionCounts.set(ext, count + 1);
+                }
             });
             
             let dominantExtension = '';
             let maxCount = 0;
-            
+            const codeExtensions = ['.ts', '.js', '.py', '.java', '.cs', '.go', '.rb', '.php', '.c', '.cpp'];
+
             extensionCounts.forEach((count, ext) => {
-                if (count > maxCount) {
+                if (count > maxCount || (count === maxCount && codeExtensions.includes(ext) && !codeExtensions.includes(dominantExtension))) {
                     maxCount = count;
                     dominantExtension = ext;
                 }
             });
             
-            let language = 'javascript'; // Default
+            const languageMap: Record<string, string> = {
+                '.js': 'javascript',
+                '.ts': 'typescript',
+                '.py': 'python',
+                '.java': 'java',
+                '.cs': 'csharp',
+                '.go': 'go',
+                '.rb': 'ruby',
+                '.php': 'php',
+                '.c': 'c',
+                '.cpp': 'cpp'
+            };
+
+            const language = languageMap[dominantExtension] || 'javascript';
             
-            switch (dominantExtension) {
-                case '.js':
-                    language = 'javascript';
-                    break;
-                case '.ts':
-                    language = 'typescript';
-                    break;
-                case '.py':
-                    language = 'python';
-                    break;
-                case '.java':
-                    language = 'java';
-                    break;
-                case '.cs':
-                    language = 'csharp';
-                    break;
-                // Altri linguaggi possono essere aggiunti qui
-            }
-            
-            // Filtra i file sorgente (escludi node_modules, .git, ecc.)
-            const sourceFiles = files.filter(file => 
-                !file.includes('node_modules') && 
-                !file.includes('.git') && 
-                !testFiles.includes(file)
-            );
+            const sourceFiles = files
+                .filter(file => codeExtensions.includes(path.extname(file).toLowerCase()))
+                .filter(file => !testFiles.includes(file));
             
             return {
                 language,
@@ -112,123 +180,65 @@ export class CodeAnalysisService {
         }
     }
 
-    /**
-     * Inserisce il codice di test in un file appropriato
-     * @param testProposal Il test da inserire
-     * @returns Se l'operazione è stata completata con successo
-     */
-    public async insertTestCode(testCode: string, targetFile: string): Promise<boolean> {
+    public async getCommitHistory(limit: number = 10): Promise<CommitInfo[]> {
+        return await this.gitService.getRecentCommits(limit);
+    }
+
+    public async getImplementedCode(): Promise<string> {
+        const commits = await this.gitService.getRecentCommits(1);
+        if (commits.length === 0) {
+            return '';
+        }
+
+        const diff = await this.gitService.showCommitDetails([commits[0].hash]);
+        return this.extractAddedLines(diff).join('\n');
+    }
+
+    private extractAddedLines(diff: string): string[] {
+        return diff
+            .split('\n')
+            .filter(line => line.startsWith('+') && !line.startsWith('+++'))
+            .map(line => line.slice(1));
+    }
+
+    public async commitChanges(state: TddState, commitTitle?: string): Promise<void> {
         try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders) {
-                throw new Error('Nessun workspace aperto');
+            const modifiedFiles = await this.gitService.getModifiedFiles();
+            const filesToCommit = modifiedFiles
+                .split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => line.substring(3));
+            
+            if (filesToCommit.length === 0) {
+                vscode.window.showInformationMessage('Nothing to commit. No modified files found.');
             }
 
-            const rootPath = workspaceFolders[0].uri.fsPath;
-            let testFilePath = '';
+            let commitMessage = '';
 
-            // Cerca il file di test specificato o crea un nuovo file
-            const existingTestFiles = await this.getAllFiles(rootPath);
-            const matchingFiles = existingTestFiles.filter(file => 
-                file.endsWith(targetFile) || 
-                path.basename(file) === targetFile
-            );
-
-            if (matchingFiles.length > 0) {
-                // Usa il primo file corrispondente
-                testFilePath = matchingFiles[0];
-            } else {
-                // Crea un nuovo file
-                testFilePath = path.join(rootPath, 'tests', targetFile);
-                
-                // Assicurati che la directory esista
-                const testDir = path.dirname(testFilePath);
-                if (!fs.existsSync(testDir)) {
-                    fs.mkdirSync(testDir, { recursive: true });
-                }
-                
-                // Crea il file con il contenuto iniziale
-                fs.writeFileSync(testFilePath, '');
+            switch (state.currentPhase) {
+                case TddPhase.GREEN:
+                    commitMessage = `GREEN: ${state.selectedTest?.title || 'Implementazione funzionalità'}`;
+                    break;
+                case TddPhase.REFACTORING:
+                    commitMessage = `REFACTORING: ${commitTitle || 'Refactoring del codice'}`;
+                    break;
+                default:
+                    commitMessage = `${state.currentPhase.toUpperCase()}: ${state.selectedTest?.title || 'Implementazione di test'}`;
+                    break;
             }
 
-            // Leggi il contenuto corrente del file
-            const currentContent = fs.readFileSync(testFilePath, 'utf8');
-            
-            // Aggiungi il nuovo test in fondo al file
-            const updatedContent = currentContent + '\n' + testCode + '\n';
-            
-            // Scrivi il file aggiornato
-            fs.writeFileSync(testFilePath, updatedContent);
-            
-            // Apri il file nell'editor
-            const document = await vscode.workspace.openTextDocument(testFilePath);
-            await vscode.window.showTextDocument(document);
-            
-            return true;
+            await this.gitService.commitFiles(filesToCommit, commitMessage);
         } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante l'inserimento del codice di test: ${error}`);
-            return false;
+            vscode.window.showErrorMessage(`Error during commit: ${error}`);
         }
     }
 
-    /**
-     * Esegue i test nel progetto
-     * @returns Risultati dell'esecuzione dei test
-     */
-    public async runTests(): Promise<{ success: boolean; output: string }> {
+    public async getModifiedFiles(): Promise<string> {
         try {
-            // Determina il comando di test appropriato
-            const workspaceInfo = await this.analyzeWorkspace();
-            
-            // In una implementazione reale, qui ci sarebbe l'esecuzione effettiva dei test
-            // Questo dipende dal framework di test utilizzato nel progetto
-            
-            // Per ora, simuliamo un risultato di successo
-            return {
-                success: true,
-                output: 'Test eseguiti con successo:\n\n' +
-                       '✅ Test di registrazione utente\n' +
-                       '✅ Test di login utente\n' +
-                       '✅ Test di login fallito\n\n' +
-                       'PASS: 3 test completati'
-            };
+            return await this.gitService.getModifiedFiles();
         } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante l'esecuzione dei test: ${error}`);
-            return {
-                success: false,
-                output: `Errore durante l'esecuzione dei test: ${error}`
-            };
+            vscode.window.showErrorMessage(`Errore durante il recupero dei file modificati: ${error}`);
+            return '';
         }
-    }
-
-    /**
-     * Ottiene tutti i file in una directory in modo ricorsivo
-     * @param dir La directory da scansionare
-     * @returns Lista di percorsi dei file
-     */
-    private async getAllFiles(dir: string): Promise<string[]> {
-        const results: string[] = [];
-        
-        try {
-            const entries = fs.readdirSync(dir, { withFileTypes: true });
-            
-            for (const entry of entries) {
-                const fullPath = path.join(dir, entry.name);
-                
-                if (entry.isDirectory()) {
-                    // Ignora directory comuni da escludere
-                    if (entry.name !== 'node_modules' && entry.name !== '.git') {
-                        const subDirFiles = await this.getAllFiles(fullPath);
-                        results.push(...subDirFiles);
-                    }
-                } else {
-                    results.push(fullPath);
-                }
-            }
-        } catch (error) {
-            console.error(`Errore durante la scansione della directory ${dir}:`, error);
-        }
-        
-        return results;
     }
 }

@@ -1,5 +1,3 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { TddCycleView } from './views/tdd-cycle-view';
 import { TddInteractionView } from './views/tdd-interaction-view';
@@ -7,45 +5,101 @@ import { TddPhase } from './models/tdd-models';
 import { TddStateManager } from './services/tdd-state-manager';
 import { AiService } from './services/ai-service';
 import { CodeAnalysisService } from './services/code-analysis-service';
+import { GitService } from './services/git-service';
+import { AiClient } from './services/ai-client';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
 	console.log('Estensione "TDD-Mentor-AI" attivata!');
 
-    // Inizializza i servizi
     const stateManager = TddStateManager.getInstance();
-    const aiService = AiService.getInstance();
-    const codeAnalysisService = CodeAnalysisService.getInstance();
+    let tddInteractionViewProvider: TddInteractionView | undefined;
+    let tddCycleViewProvider: TddCycleView | undefined;
 
-    // Registra i provider delle viste
-    const tddCycleViewProvider = new TddCycleView(context.extensionUri);
-    const tddInteractionViewProvider = new TddInteractionView(context.extensionUri);
+    const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+    if (!apikey) {
+        const configAction = 'Configura API Key';
+        const response = await vscode.window.showWarningMessage(
+            'Per utilizzare TDD-Mentor-AI è necessaria una API key di OpenAI.',
+            configAction
+        );
+        
+        if (response === configAction) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'tddMentorAI.openaiApiKey');
+        }
+    }
 
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            TddCycleView.viewType,
-            tddCycleViewProvider
-        )
-    );
+    const problemRequirements = vscode.workspace.getConfiguration('tddMentorAI').get('problemRequirements', '');
+    if (!problemRequirements) {
+        const configAction = 'Configura Requisiti Problema';
+        const response = await vscode.window.showWarningMessage(
+            'Per utilizzare TDD-Mentor-AI è necessario specificare i requisiti del problema.',
+            configAction
+        );
 
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            TddInteractionView.viewType,
-            tddInteractionViewProvider
-        )
-    );
+        if (response === configAction) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'tddMentorAI.problemRequirements');
+        }
+    }
 
-    // Registra i comandi
+    let gitService: GitService | null = null;
+    let codeAnalysisService: CodeAnalysisService | null = null;
+    let aiService: AiService;
+
+    try {
+        gitService = await GitService.create();
+        if (!gitService) {
+            const initGitAction = 'Inizializza Git';
+            const response = await vscode.window.showWarningMessage(
+                'TDD-Mentor-AI richiede un repository Git. Alcune funzionalità saranno limitate.',
+                initGitAction
+            );
+            
+            if (response === initGitAction) {
+                vscode.commands.executeCommand('git.init');
+            }
+        } else {
+            codeAnalysisService = CodeAnalysisService.getInstance(gitService);
+            
+            const aiClient = new AiClient(apikey);
+            aiService = await AiService.getInstance(codeAnalysisService, aiClient);
+
+            tddCycleViewProvider = new TddCycleView(context.extensionUri);
+
+            try {
+                if (aiService && codeAnalysisService) {
+                    tddInteractionViewProvider = await TddInteractionView.create(context.extensionUri, aiService, codeAnalysisService);
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Errore durante la creazione della vista di interazione TDD: ${error}`);
+            }
+        }
+    } catch (error) {
+        vscode.window.showErrorMessage(`Errore durante l'inizializzazione dei servizi: ${error}`);
+    }
+
+    if (tddCycleViewProvider) {
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                TddCycleView.viewType,
+                tddCycleViewProvider
+            )
+        );
+    }
+
+    if (tddInteractionViewProvider) {
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                TddInteractionView.viewType,
+                tddInteractionViewProvider
+            )
+        );
+    }
+
     context.subscriptions.push(
         vscode.commands.registerCommand('tdd-mentor-ai.start', () => {
-            // Mostra la view del ciclo TDD
             vscode.commands.executeCommand('workbench.view.extension.tdd-mentor-ai-sidebar');
             
-            // Resetta lo stato dell'estensione
             stateManager.reset();
             vscode.window.showInformationMessage('Sessione TDD Mentor avviata!');
         })
@@ -55,7 +109,6 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('tdd-mentor-ai.pickPhase', async () => {
             stateManager.setPhase(TddPhase.PICK);
             
-            // Genera nuove user stories
             const userStories = await aiService.generateUserStories();
             stateManager.setUserStories(userStories);
             
@@ -106,7 +159,6 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('tdd-mentor-ai.verify', async () => {
             vscode.window.showInformationMessage('Verifica dei test in corso...');
             
-            // Esegui i test e verifica i risultati
             const testResults = await aiService.verifyTests();
             stateManager.setTestResults(testResults.success, testResults.message);
             
@@ -120,10 +172,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('tdd-mentor-ai.complete', async () => {
-            // Completa la fase corrente e torna alla fase PICK
             stateManager.setPhase(TddPhase.PICK);
             
-            // Genera nuove user stories
             const userStories = await aiService.generateUserStories();
             stateManager.setUserStories(userStories);
             
@@ -132,5 +182,4 @@ export function activate(context: vscode.ExtensionContext) {
     );
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
