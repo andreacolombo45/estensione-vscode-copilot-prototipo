@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CommitInfo, GitService } from './git-service';
+import { TddPhase, TddState } from '../models/tdd-models';
 import { exec } from 'child_process';
 import {promisify} from 'util';
 
@@ -198,5 +199,46 @@ export class CodeAnalysisService {
             .split('\n')
             .filter(line => line.startsWith('+') && !line.startsWith('+++'))
             .map(line => line.slice(1));
+    }
+
+    public async commitChanges(state: TddState, commitTitle?: string): Promise<void> {
+        try {
+            const modifiedFiles = await this.gitService.getModifiedFiles();
+            const filesToCommit = modifiedFiles
+                .split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => line.substring(3));
+            
+            if (filesToCommit.length === 0) {
+                vscode.window.showInformationMessage('Nothing to commit. No modified files found.');
+            }
+
+            let commitMessage = '';
+
+            switch (state.currentPhase) {
+                case TddPhase.GREEN:
+                    commitMessage = `GREEN: ${state.selectedTest?.title || 'Implementazione funzionalità'}`;
+                    break;
+                case TddPhase.REFACTORING:
+                    commitMessage = `REFACTORING: ${commitTitle || 'Refactoring del codice'}`;
+                    break;
+                default:
+                    commitMessage = `${state.currentPhase.toUpperCase()}: ${state.selectedTest?.title || 'Implementazione di test'}`;
+                    break;
+            }
+
+            await this.gitService.commitFiles(filesToCommit, commitMessage);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error during commit: ${error}`);
+        }
+    }
+
+    public async getModifiedFiles(): Promise<string> {
+        try {
+            return await this.gitService.getModifiedFiles();
+        } catch (error) {
+            vscode.window.showErrorMessage(`Errore durante il recupero dei file modificati: ${error}`);
+            return '';
+        }
     }
 }

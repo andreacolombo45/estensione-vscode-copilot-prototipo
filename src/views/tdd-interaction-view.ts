@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { TddPhase, TddState, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
 import { TddStateManager } from '../services/tdd-state-manager';
 import { AiService } from '../services/ai-service';
-import { GitService } from '../services/git-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 
 export class TddInteractionView implements vscode.WebviewViewProvider {
@@ -114,6 +113,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     this._stateManager.setTestResults(testResults.success, testResults.message);
                     
                     if (testResults.success) {
+                        await this._codeAnalysisService.commitChanges(this._stateManager.state);
                         this._stateManager.setPhase(TddPhase.REFACTORING);
                         
                         const refactoringSuggestions = await this._aiService.generateRefactoringSuggestions();
@@ -122,10 +122,31 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     break;
                     
                 case 'completePhase':
-                    this._stateManager.setPhase(TddPhase.PICK);
-                    
-                    const userStories = await this._aiService.generateUserStories();
-                    this._stateManager.setUserStories(userStories);
+                    try {
+                        const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+                        const filesToCommit = modifiedFiles
+                            .split('\n')
+                            .filter(line => line.trim() !== '')
+                            .map(line => line.substring(3)); 
+                        
+                        if (filesToCommit.length > 0) {
+                            const commitTitle = await vscode.window.showInputBox({
+                                prompt: 'Inserisci il titolo del commit',
+                                placeHolder: 'Titolo del commit'
+                            });
+
+                            if (commitTitle) {
+                                await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
+
+                                this._stateManager.setPhase(TddPhase.PICK);
+                                
+                                const userStories = await this._aiService.generateUserStories();
+                                this._stateManager.setUserStories(userStories);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error getting modified files:', error);
+                    }
                     break;
                     
                 case 'refreshUserStories':

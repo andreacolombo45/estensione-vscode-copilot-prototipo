@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
+import { AiMode, TddPhase, TddState } from '../models/tdd-models';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -234,5 +235,75 @@ diff --git a/file.ts b/file.ts
 
         assert.strictEqual(result, '');
         assert.ok(getRecentCommitsStub.calledOnceWith(1));
+    });
+
+    test('Should handle no modified files in commit', async () => {
+        const mockState: TddState = {
+            currentPhase: TddPhase.GREEN,
+            currentMode: AiMode.ASK,
+            testProposals: [],
+            userStories: [],
+            refactoringSuggestions: [],
+        };
+        const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
+        getModifiedFilesStub.resolves('');
+
+        const showInformationMessageSpy = sinon.spy(vscode.window, 'showInformationMessage');
+
+        await codeAnalysisService.commitChanges(mockState);
+        
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(showInformationMessageSpy.calledWith('Nothing to commit. No modified files found.'));
+    });
+
+    test('Should commit changes with GREEN phase', async () => {
+        const mockState: TddState = {
+            currentPhase: TddPhase.GREEN,
+            currentMode: AiMode.ASK,
+            testProposals: [],
+            userStories: [],
+            refactoringSuggestions: [],
+            selectedTest: { 
+                id: 'test1',
+                title: 'Implement feature X',
+                description: 'This test implements feature X',
+                code: 'test code here',
+                targetFile: 'src/featureX.ts'
+            }
+        };
+
+        const modifiedFiles = ' M src/file1.ts\n M src/file2.ts\n';
+        const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
+        getModifiedFilesStub.resolves(modifiedFiles);
+
+        const commitFilesStub = gitServiceStub.commitFiles as sinon.SinonStub;
+        commitFilesStub.resolves();
+
+        await codeAnalysisService.commitChanges(mockState);
+
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'GREEN: Implement feature X'));
+    });
+
+    test('Should commit changes with REFACTORING phase', async () => {
+        const mockState: TddState = {
+            currentPhase: TddPhase.REFACTORING,
+            currentMode: AiMode.ASK,
+            testProposals: [],
+            userStories: [],
+            refactoringSuggestions: [],
+        };
+
+        const modifiedFiles = ' M src/file1.ts\n M src/file2.ts\n';
+        const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
+        getModifiedFilesStub.resolves(modifiedFiles);
+
+        const commitFilesStub = gitServiceStub.commitFiles as sinon.SinonStub;
+        commitFilesStub.resolves();
+
+        await codeAnalysisService.commitChanges(mockState, 'Refactor code');
+
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'REFACTORING: Refactor code'));
     });
 });

@@ -85,4 +85,23 @@ export class GitService {
         const { stdout } = await this.execFn(`git show ${args.join(' ')}`, { cwd: this.workspacePath });
         return stdout;
     }
+
+    public async getModifiedFiles(): Promise<string> {
+        const { stdout } = await this.execFn('git status --porcelain', { cwd: this.workspacePath });
+        return stdout;
+    }
+
+    private async addFilesToCommit(files: string[]): Promise<void> {
+        if (files.length === 0) {
+            return;
+        }
+        const addCmd = `git add ${files.map(f => `"${f}"`).join(' ')}`;
+        await this.execFn(addCmd, { cwd: this.workspacePath });
+    }
+
+    public async commitFiles(files: string[], message: string): Promise<void> {
+        await this.addFilesToCommit(files);
+        const commitCmd = `git commit -m "${message}"`;
+        await this.execFn(commitCmd, { cwd: this.workspacePath });
+    }
 }
