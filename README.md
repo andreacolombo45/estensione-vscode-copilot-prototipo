@@ -38,21 +38,55 @@ L'estensione guida gli studenti attraverso le seguenti fasi del ciclo TDD:
 
 ## Requisiti
 
-- Visual Studio Code versione 1.101.0 o superiore
+Assicurati di avere installato:
+
+- [Visual Studio Code](https://code.visualstudio.com/) **v1.101.0** o superiore
+- [Node.js](https://nodejs.org/) (versione LTS consigliata)
+- [Git](https://git-scm.com/)
 
 ## Installazione
 
-1. Apri Visual Studio Code
-2. Vai alla sezione Estensioni (Ctrl+Shift+X)
-3. Cerca "TDD-Mentor-AI"
-4. Clicca su "Installa"
+**1**. **Clona il repository**
+```bash
+   git clone https://github.com/andreacolombo45/estensione-vscode-copilot-prototipo.git
+   cd estensione-vscode-copilot-prototipo
+```
+
+**2**. **Installa le dipendenze**
+```bash 
+npm install
+```
+
+**3**. **Compila l'estensione**
+```bash
+npm run compile
+```
+
+**4**. **Apri il progetto in VS Code**
+```bash
+code.
+```
+
+**5**. **Installa le estensioni consigliate (se suggerite al primo avvio)**
+- ESLint
+- TypeScript + WebPack Problem Matchers
+- Extension Test Runner
+
+**6**. **Avvia l'estensione in modalità debug**
+
+Premi `F5` per avviare una nuova finestra di **Extension Development Host** con l’estensione attiva.
+In questa finestra, troverai la tua estensione nella **Activity Bar** (barra laterale delle estensioni) con l’icona di un **becher**.
 
 ## Utilizzo
 
-1. Apri il progetto su cui vuoi lavorare in VS Code
-2. Apri il pannello laterale di TDD-Mentor-AI facendo clic sull'icona del test nella barra delle attività
-3. Clicca su "Avvia Sessione" per iniziare una sessione di TDD
-4. Segui le istruzioni nell'area di interazione per ogni fase del ciclo TDD
+**1**. **Apri una cartella di lavoro** (progetto su cui usare il TDD Mentor)
+
+**2**. **Inserirsci la tua API Key di** [OpenRouter](https://openrouter.ai/) e le **specifiche del problema** quando richiesto (tramite i popup offerti dall'estensione)
+
+**3**. **Inizializza Git**, se richiesto
+
+**4**. **Avvia il ciclo TDD**
+Per generare le **User Stories iniziali**, clicca sul pulsante di refresh delle User Stories nel pannello laterale.
 
 ## Comandi
 
@@ -65,34 +99,3 @@ L'estensione fornisce i seguenti comandi:
 - `TDD Mentor: Fase REFACTORING` - Vai alla fase di miglioramento del codice
 - `TDD Mentor: Verifica Test` - Verifica che i test passino
 - `TDD Mentor: Completa Fase` - Completa la fase corrente e passa alla successiva
-
-## Contribuire
-
-Le contribuzioni sono benvenute! Per favore leggi le linee guida per i contributi prima di iniziare.
-
-## Licenza
-
-MIT
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
