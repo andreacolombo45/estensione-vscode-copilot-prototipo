@@ -8,6 +8,7 @@ import { TddPhase } from '../models/tdd-models';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
 import { get } from 'http';
+import { stat } from 'fs';
 
 suite('TddInteractionView Test Suite', () => {
     let tddInteractionView: TddInteractionView;
@@ -99,7 +100,6 @@ suite('TddInteractionView Test Suite', () => {
             .resolves(mockTestProposals);
 
         stateManager.setUserStories([mockUserStory]);
-        stateManager.selectUserStory('1');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -286,5 +286,30 @@ suite('TddInteractionView Test Suite', () => {
             { id: 'refactor1', title: 'Refactor 1', description: 'Refactor description' },
             { id: 'refactor2', title: 'Refactor 2', description: 'Another refactor' }
         ]));
+    });
+
+    test('Should not generate new test proposals if selecting same user story', async () => {
+        const mockUserStory = { id: '1', title: 'Test User Story', description: 'Test Description' };
+        const mockTestProposals = [
+            { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' }
+        ];
+
+        const generateTestProposalsStub = sinon.stub(aiService, 'generateTestProposals')
+            .resolves(mockTestProposals);
+
+        stateManager.setUserStories([mockUserStory]);
+        stateManager.selectUserStory('1'); 
+        stateManager.setTestProposals(mockTestProposals);
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'selectUserStory', storyId: '1' });
+
+        assert.ok(generateTestProposalsStub.notCalled);
+        assert.deepStrictEqual(stateManager.state.testProposals, mockTestProposals);
     });
 });

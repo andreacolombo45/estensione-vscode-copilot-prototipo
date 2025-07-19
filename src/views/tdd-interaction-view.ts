@@ -62,11 +62,12 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             switch (data.command) {
                 case 'selectUserStory':
                     if (data.storyId) {
+                        const currentUserStory = this._stateManager.state.selectedUserStory;
                         this._stateManager.selectUserStory(data.storyId);
                         this._stateManager.setPhase(TddPhase.RED);
                         
                         const state = this._stateManager.state;
-                        if (state.selectedUserStory) {
+                        if (state.selectedUserStory && currentUserStory?.id !== data.storyId) {
                             const testProposals = await this._aiService.generateTestProposals(state.selectedUserStory);
                             this._stateManager.setTestProposals(testProposals);
                         }
