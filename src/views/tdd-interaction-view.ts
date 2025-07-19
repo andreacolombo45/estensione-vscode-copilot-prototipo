@@ -123,7 +123,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     }
                     break;
                     
-                case 'completePhase':
+                case 'completeCycle':
                     try {
                         const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
                         const filesToCommit = modifiedFiles
@@ -394,9 +394,9 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     });
                 }
                 
-                function completePhase() {
+                function completeCycle() {
                     vscode.postMessage({
-                        command: 'completePhase'
+                        command: 'completeCycle'
                     });
                 }
                 
@@ -662,7 +662,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             
             if (state.testResults.success) {
                 testResultHtml += `
-                <button class="btn" onclick="completePhase()">Passa al Refactoring</button>
+                <button class="btn" onclick="completeCycle()">Passa al Refactoring</button>
                 `;
             }
         }
@@ -718,7 +718,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         
         <p>Applica i miglioramenti che ritieni appropriati, poi prosegui.</p>
         
-        <button class="btn" onclick="completePhase()">Completa Ciclo</button>
+        <button class="btn" onclick="completeCycle()">Completa Ciclo</button>
         `;
     }
 

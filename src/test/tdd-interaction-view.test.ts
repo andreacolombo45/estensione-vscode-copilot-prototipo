@@ -167,7 +167,7 @@ suite('TddInteractionView Test Suite', () => {
         ]));
     });
 
-    test("Should handle completePhase message", async () => {
+    test("Should handle completeCycle message", async () => {
         const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
             { id: '1', title: 'Test User Story 1', description: 'Description 1' },
             { id: '2', title: 'Test User Story 2', description: 'Description 2' }
@@ -186,7 +186,7 @@ suite('TddInteractionView Test Suite', () => {
         tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
 
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
-        await messageHandler({ command: 'completePhase' });
+        await messageHandler({ command: 'completeCycle' });
 
         assert.ok(getModifiedFilesStub.calledOnce);
         assert.ok(showInputBoxStub.calledOnce);
