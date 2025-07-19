@@ -140,6 +140,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                             if (commitTitle) {
                                 await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
 
+                                this._stateManager.reset();
                                 this._stateManager.setPhase(TddPhase.PICK);
                                 
                                 const userStories = await this._aiService.generateUserStories();

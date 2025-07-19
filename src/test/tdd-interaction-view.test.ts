@@ -173,6 +173,7 @@ suite('TddInteractionView Test Suite', () => {
             { id: '2', title: 'Test User Story 2', description: 'Description 2' }
         ]);
 
+        const resetSpy = sinon.spy(stateManager, 'reset');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
         const setUserStoriesSpy = sinon.spy(stateManager, 'setUserStories');
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
@@ -192,6 +193,7 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(commitChangesStub.calledOnce);
         assert.ok(generateUserStoriesStub.called);
         assert.ok(setPhaseSpy.calledWith(TddPhase.PICK));
+        assert.ok(resetSpy.calledOnce);
         assert.ok(setUserStoriesSpy.calledWith([
             { id: '1', title: 'Test User Story 1', description: 'Description 1' },
             { id: '2', title: 'Test User Story 2', description: 'Description 2' }
