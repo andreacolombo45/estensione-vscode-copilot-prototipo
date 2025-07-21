@@ -125,55 +125,20 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     
                 case 'completeCycle':
                     try {
-                        const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
-                        const filesToCommit = modifiedFiles
-                            .split('\n')
-                            .filter(line => line.trim() !== '')
-                            .map(line => line.substring(3)); 
-                        
-                        if (filesToCommit.length > 0) {
-                            const commitTitle = await vscode.window.showInputBox({
-                                prompt: 'Inserisci il titolo del commit',
-                                placeHolder: 'Titolo del commit'
-                            });
-
-                            if (commitTitle) {
-                                await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
-                            }
-                        }
+                        await this.commitRefactoring();
 
                         this._stateManager.reset();
                         this._stateManager.setPhase(TddPhase.PICK);
-                        
+
                         const userStories = await this._aiService.generateUserStories();
                         this._stateManager.setUserStories(userStories);
-                        
                     } catch (error) {
-                        console.error('Error getting modified files:', error);
+                        console.error('Errore durante il ciclo TDD:', error);
                     }
                     break;
                 
                 case 'commitAndStay':
-                    try {
-                        const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
-                        const filesToCommit = modifiedFiles
-                            .split('\n')
-                            .filter(line => line.trim() !== '')
-                            .map(line => line.substring(3)); 
-                        
-                        if (filesToCommit.length > 0) {
-                            const commitTitle = await vscode.window.showInputBox({
-                                prompt: 'Inserisci il titolo del commit',
-                                placeHolder: 'Titolo del commit'
-                            });
-
-                            if (commitTitle) {
-                                await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error committing changes:', error);
-                    }
+                    await this.commitRefactoring();
                     break;
                     
                 case 'refreshUserStories':
@@ -732,6 +697,28 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
 
         <button class="btn" onclick="commitAndStay()">Salva Refactoring</button>
         `;
+    }
+
+    private async commitRefactoring() {
+        try {
+            const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+            const filesToCommit = modifiedFiles
+                .split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => line.substring(3)); 
+            if (filesToCommit.length > 0) {
+                const commitTitle = await vscode.window.showInputBox({
+                    prompt: 'Inserisci il titolo del commit',
+                    placeHolder: 'Titolo del commit'
+                });
+
+                if (commitTitle) {
+                    await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
+                }
+            }
+        } catch (error) {
+            console.error('Error committing changes:', error);
+        }
     }
 
     private _escapeHtml(unsafe: string): string {
