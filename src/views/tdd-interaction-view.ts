@@ -139,14 +139,15 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
 
                             if (commitTitle) {
                                 await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
-
-                                this._stateManager.reset();
-                                this._stateManager.setPhase(TddPhase.PICK);
-                                
-                                const userStories = await this._aiService.generateUserStories();
-                                this._stateManager.setUserStories(userStories);
                             }
                         }
+
+                        this._stateManager.reset();
+                        this._stateManager.setPhase(TddPhase.PICK);
+                        
+                        const userStories = await this._aiService.generateUserStories();
+                        this._stateManager.setUserStories(userStories);
+                        
                     } catch (error) {
                         console.error('Error getting modified files:', error);
                     }
@@ -649,24 +650,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             return '<div>Nessun test selezionato. Torna alla fase RED.</div>';
         }
         
-        let testResultHtml = '';
-        const state = this._stateManager.state;
-        
-        if (state.testResults) {
-            const resultClass = state.testResults.success ? 'success' : 'failure';
-            testResultHtml = `
-            <div class="test-result ${resultClass}">
-                ${state.testResults.message}
-            </div>
-            `;
-            
-            if (state.testResults.success) {
-                testResultHtml += `
-                <button class="btn" onclick="completeCycle()">Passa al Refactoring</button>
-                `;
-            }
-        }
-        
         return `
         <div class="phase-header">
             <span class="phase-emoji">🟢</span>
@@ -681,8 +664,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <p>Ora implementa il codice necessario per far passare questo test.</p>
         
         <button class="btn" onclick="verifyTests()">Verifica Test</button>
-        
-        ${testResultHtml}
         `;
     }
 

@@ -314,4 +314,31 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(generateTestProposalsStub.notCalled);
         assert.deepStrictEqual(stateManager.state.testProposals, mockTestProposals);
     });
+
+    test('Should reset cycle even if no refactoring is done', async () => {
+        const resetSpy = sinon.spy(stateManager, 'reset');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const setUserStoriesSpy = sinon.spy(stateManager, 'setUserStories');
+        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        getModifiedFilesStub.resolves('');
+        const showInputBoxSpy = sinon.spy(vscode.window, 'showInputBox');
+        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
+        const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([]);
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'completeCycle' });
+
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(showInputBoxSpy.notCalled);
+        assert.ok(commitChangesStub.notCalled);
+        assert.ok(resetSpy.calledOnce);
+        assert.ok(setPhaseSpy.calledWith(TddPhase.PICK));
+        assert.ok(generateUserStoriesStub.calledOnce);
+        assert.ok(setUserStoriesSpy.calledWith([]));
+    });
 });
