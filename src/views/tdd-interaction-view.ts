@@ -152,6 +152,29 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         console.error('Error getting modified files:', error);
                     }
                     break;
+                
+                case 'commitAndStay':
+                    try {
+                        const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+                        const filesToCommit = modifiedFiles
+                            .split('\n')
+                            .filter(line => line.trim() !== '')
+                            .map(line => line.substring(3)); 
+                        
+                        if (filesToCommit.length > 0) {
+                            const commitTitle = await vscode.window.showInputBox({
+                                prompt: 'Inserisci il titolo del commit',
+                                placeHolder: 'Titolo del commit'
+                            });
+
+                            if (commitTitle) {
+                                await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error committing changes:', error);
+                    }
+                    break;
                     
                 case 'refreshUserStories':
                     const stories = await this._aiService.generateUserStories();
@@ -398,6 +421,12 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 function completeCycle() {
                     vscode.postMessage({
                         command: 'completeCycle'
+                    });
+                }
+
+                function commitAndStay() {
+                    vscode.postMessage({
+                        command: 'commitAndStay'
                     });
                 }
                 
@@ -700,6 +729,8 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <p>Applica i miglioramenti che ritieni appropriati, poi prosegui.</p>
         
         <button class="btn" onclick="completeCycle()">Completa Ciclo</button>
+
+        <button class="btn" onclick="commitAndStay()">Salva Refactoring</button>
         `;
     }
 
