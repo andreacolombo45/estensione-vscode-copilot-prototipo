@@ -359,4 +359,34 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(showInputBoxStub.calledOnce);
         assert.ok(setPhaseSpy.notCalled);
     });
+
+    test('Should hande commitAndGoToTest message', async () => {
+        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
+        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Commit message');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const resetForNewTestsSpy = sinon.spy(stateManager, 'resetForNewTests');
+        const generateTestProposalsStub = sinon.stub(aiService, 'generateTestProposals').resolves([]);
+        const setTestProposalsSpy = sinon.spy(stateManager, 'setTestProposals');
+
+        const mockUserStory = { id: '1', title: 'Test User Story', description: 'Test Description' };
+        stateManager.setUserStories([mockUserStory]);
+        stateManager.selectUserStory('1');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'commitAndGoToTest' });
+
+        assert.ok(getModifiedFilesStub.calledOnce);
+        assert.ok(commitChangesStub.calledOnce);
+        assert.ok(showInputBoxStub.calledOnce);
+        assert.ok(resetForNewTestsSpy.calledOnce);
+        assert.ok(setPhaseSpy.calledWith(TddPhase.RED));
+        assert.ok(generateTestProposalsStub.calledOnce);
+        assert.ok(setTestProposalsSpy.calledWith([]));
+    });
 });

@@ -141,6 +141,9 @@ export class TddStateManager {
         this._notifyStateChanged();
     }
 
+    public resetForNewTests(): void {
+    }
+
     private _notifyStateChanged(): void {
         this._stateEventEmitter.fire(this.state);
     }

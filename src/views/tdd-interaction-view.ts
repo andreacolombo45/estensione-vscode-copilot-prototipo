@@ -140,7 +140,24 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 case 'commitAndStay':
                     await this.commitRefactoring();
                     break;
-                    
+                
+                case 'commitAndGoToTest':
+                    try {
+                        await this.commitRefactoring();
+
+                        this._stateManager.resetForNewTests();
+                        this._stateManager.setPhase(TddPhase.RED);
+
+                        if (this._stateManager.state.selectedUserStory) {
+                            const testProposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
+                            this._stateManager.setTestProposals(testProposals);
+                        }
+                    } catch (error) {
+                        console.error('Errore durante il ciclo TDD:', error);
+                    }
+                
+                    break;
+
                 case 'refreshUserStories':
                     const stories = await this._aiService.generateUserStories();
                     this._stateManager.setUserStories(stories);
@@ -394,7 +411,13 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         command: 'commitAndStay'
                     });
                 }
-                
+
+                function commitAndGoToTest() {
+                    vscode.postMessage({
+                        command: 'commitAndGoToTest'
+                    });
+                }
+
                 function refreshUserStories() {
                     vscode.postMessage({
                         command: 'refreshUserStories'
@@ -696,6 +719,8 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <button class="btn" onclick="completeCycle()">Completa Ciclo</button>
 
         <button class="btn" onclick="commitAndStay()">Salva Refactoring</button>
+
+        <button class="btn" onclick="commitAndGoToTest()">Passa ai Test</button>
         `;
     }
 
