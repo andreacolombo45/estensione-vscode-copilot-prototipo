@@ -7,8 +7,6 @@ import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase } from '../models/tdd-models';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
-import { get } from 'http';
-import { stat } from 'fs';
 
 suite('TddInteractionView Test Suite', () => {
     let tddInteractionView: TddInteractionView;
