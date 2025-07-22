@@ -182,6 +182,19 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage('Fase completata! Ritorno alla fase PICK.');
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.runTests', async () => {
+            stateManager.setPhase(TddPhase.RED);
+
+            const testResults = await codeAnalysisService?.runTests();
+            if (testResults) {
+                vscode.window.showInformationMessage(`Test eseguiti: ${testResults.success ? 'Successo' : 'Fallimento'}`);
+            } else {
+                vscode.window.showErrorMessage('Errore durante l\'esecuzione dei test.');
+            }
+        })
+    );
 }
 
 export function deactivate() {}

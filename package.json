@@ -51,6 +51,11 @@
         "command": "tdd-mentor-ai.complete",
         "title": "TDD Mentor: Completa Fase",
         "icon": "$(pass)"
+      },
+      {
+        "command": "tdd-mentor-ai.runTests",
+        "title": "TDD Mentor: Esegui Test",
+        "icon": "$(run)"
       }
     ],
     "viewsContainers": {
