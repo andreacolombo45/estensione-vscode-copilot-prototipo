@@ -111,8 +111,8 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     break;
                     
                 case 'verifyTests':
-                    const testResults = await this._aiService.verifyTests();
-                    this._stateManager.setTestResults(testResults.success, testResults.message);
+                    const testResults = await this._codeAnalysisService.runTests();
+                    this._stateManager.setTestResults(testResults.success, testResults.output);
                     
                     if (testResults.success) {
                         await this._codeAnalysisService.commitChanges(this._stateManager.state);

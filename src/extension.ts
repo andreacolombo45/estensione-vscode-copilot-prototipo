@@ -158,11 +158,13 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('tdd-mentor-ai.verify', async () => {
             vscode.window.showInformationMessage('Verifica dei test in corso...');
-            
-            const testResults = await aiService.verifyTests();
-            stateManager.setTestResults(testResults.success, testResults.message);
-            
-            if (testResults.success) {
+
+            const testResults = await codeAnalysisService?.runTests();
+            if (testResults) {
+                stateManager.setTestResults(testResults.success, testResults.output);
+            }
+
+            if (testResults?.success) {
                 vscode.window.showInformationMessage('Tutti i test sono passati!');
             } else {
                 vscode.window.showWarningMessage('Alcuni test non sono passati. Controlla il messaggio di errore.');
