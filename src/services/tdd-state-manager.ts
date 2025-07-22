@@ -141,6 +141,22 @@ export class TddStateManager {
         this._notifyStateChanged();
     }
 
+    public resetForNewTests(): void {
+        this._state = {
+            currentPhase: TddPhase.RED,
+            currentMode: AiMode.MENTOR,
+            testProposals: [],
+            selectedTest: undefined,
+            modifiedSelectedTest: undefined,
+            testResults: undefined,
+            isEditingTest: false,
+            userStories: this._state.userStories, 
+            refactoringSuggestions: [],
+            selectedUserStory: this._state.selectedUserStory
+        };
+        this._notifyStateChanged();
+    }
+
     private _notifyStateChanged(): void {
         this._stateEventEmitter.fire(this.state);
     }

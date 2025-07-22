@@ -164,4 +164,35 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.modifiedSelectedTest?.code, 'new code');
         assert.strictEqual(state.modifiedSelectedTest?.targetFile, 'testFile.js');
     });
+
+    test('Should reset state partially without affecting user stories', () => {
+        const stories = [
+            { id: '1', title: 'Story 1', description: 'Description 1' },
+            { id: '2', title: 'Story 2', description: 'Description 2' }
+        ];
+
+        stateManager.setUserStories(stories);
+        stateManager.selectUserStory('1');
+        stateManager.setPhase(TddPhase.REFACTORING);
+        stateManager.setTestProposals([{ id: '1', title: 'Test 1', description: 'Description 1', code: 'code1' }]);
+        stateManager.setRefactoringSuggestions([{ id: '1', title: 'Refactor 1', description: 'Description 1' }]);
+        stateManager.setTestResults(true, 'All tests passed');
+        stateManager.setTestEditingMode(true);
+        stateManager.updateModifiedSelectedTest('new code', 'testFile.js');
+        stateManager.selectTestProposal('1');
+        
+        stateManager.resetForNewTests();
+        
+        const state = stateManager.state;
+        assert.strictEqual(state.currentPhase, TddPhase.RED);
+        assert.strictEqual(state.currentMode, AiMode.MENTOR);
+        assert.deepStrictEqual(state.userStories, stories);
+        assert.strictEqual(state.selectedUserStory?.id, '1');
+        assert.strictEqual(state.testProposals.length, 0);
+        assert.strictEqual(state.refactoringSuggestions.length, 0);
+        assert.strictEqual(state.testResults, undefined);
+        assert.strictEqual(state.isEditingTest, false);
+        assert.strictEqual(state.modifiedSelectedTest, undefined);
+        assert.strictEqual(state.selectedTest, undefined);
+    });
 });

@@ -35,9 +35,16 @@ export class AiClient {
                 });
             }
 
+            let finalPrompt = prompt;
+
+            if (options.context) {
+                const contextStr = JSON.stringify(options.context, null, 2);
+                finalPrompt = `Contesto del progetto:\n${contextStr}\n\nPrompt:\n${prompt}`;
+            }
+
             messages.push({
                     role: 'user',
-                    content: prompt
+                    content: finalPrompt
                 });
 
             const response = await fetch(this.apiUrl, {

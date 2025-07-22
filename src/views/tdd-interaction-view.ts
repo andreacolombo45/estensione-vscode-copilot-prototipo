@@ -62,11 +62,13 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             switch (data.command) {
                 case 'selectUserStory':
                     if (data.storyId) {
+                        const currentUserStory = this._stateManager.state.selectedUserStory;
                         this._stateManager.selectUserStory(data.storyId);
                         this._stateManager.setPhase(TddPhase.RED);
                         
                         const state = this._stateManager.state;
-                        if (state.selectedUserStory) {
+                        if (state.selectedUserStory && currentUserStory?.id !== data.storyId) {
+                            this._stateManager.setTestProposals([]);
                             const testProposals = await this._aiService.generateTestProposals(state.selectedUserStory);
                             this._stateManager.setTestProposals(testProposals);
                         }
@@ -109,8 +111,8 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     break;
                     
                 case 'verifyTests':
-                    const testResults = await this._aiService.verifyTests();
-                    this._stateManager.setTestResults(testResults.success, testResults.message);
+                    const testResults = await this._codeAnalysisService.runTests();
+                    this._stateManager.setTestResults(testResults.success, testResults.output);
                     
                     if (testResults.success) {
                         await this._codeAnalysisService.commitChanges(this._stateManager.state);
@@ -121,34 +123,41 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     }
                     break;
                     
-                case 'completePhase':
+                case 'completeCycle':
                     try {
-                        const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
-                        const filesToCommit = modifiedFiles
-                            .split('\n')
-                            .filter(line => line.trim() !== '')
-                            .map(line => line.substring(3)); 
-                        
-                        if (filesToCommit.length > 0) {
-                            const commitTitle = await vscode.window.showInputBox({
-                                prompt: 'Inserisci il titolo del commit',
-                                placeHolder: 'Titolo del commit'
-                            });
+                        await this.commitRefactoring();
 
-                            if (commitTitle) {
-                                await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
+                        this._stateManager.reset();
+                        this._stateManager.setPhase(TddPhase.PICK);
 
-                                this._stateManager.setPhase(TddPhase.PICK);
-                                
-                                const userStories = await this._aiService.generateUserStories();
-                                this._stateManager.setUserStories(userStories);
-                            }
-                        }
+                        const userStories = await this._aiService.generateUserStories();
+                        this._stateManager.setUserStories(userStories);
                     } catch (error) {
-                        console.error('Error getting modified files:', error);
+                        console.error('Errore durante il ciclo TDD:', error);
                     }
                     break;
-                    
+                
+                case 'commitAndStay':
+                    await this.commitRefactoring();
+                    break;
+                
+                case 'commitAndGoToTest':
+                    try {
+                        await this.commitRefactoring();
+
+                        this._stateManager.resetForNewTests();
+                        this._stateManager.setPhase(TddPhase.RED);
+
+                        if (this._stateManager.state.selectedUserStory) {
+                            const testProposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
+                            this._stateManager.setTestProposals(testProposals);
+                        }
+                    } catch (error) {
+                        console.error('Errore durante il ciclo TDD:', error);
+                    }
+                
+                    break;
+
                 case 'refreshUserStories':
                     const stories = await this._aiService.generateUserStories();
                     this._stateManager.setUserStories(stories);
@@ -391,12 +400,24 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     });
                 }
                 
-                function completePhase() {
+                function completeCycle() {
                     vscode.postMessage({
-                        command: 'completePhase'
+                        command: 'completeCycle'
                     });
                 }
-                
+
+                function commitAndStay() {
+                    vscode.postMessage({
+                        command: 'commitAndStay'
+                    });
+                }
+
+                function commitAndGoToTest() {
+                    vscode.postMessage({
+                        command: 'commitAndGoToTest'
+                    });
+                }
+
                 function refreshUserStories() {
                     vscode.postMessage({
                         command: 'refreshUserStories'
@@ -646,24 +667,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             return '<div>Nessun test selezionato. Torna alla fase RED.</div>';
         }
         
-        let testResultHtml = '';
-        const state = this._stateManager.state;
-        
-        if (state.testResults) {
-            const resultClass = state.testResults.success ? 'success' : 'failure';
-            testResultHtml = `
-            <div class="test-result ${resultClass}">
-                ${state.testResults.message}
-            </div>
-            `;
-            
-            if (state.testResults.success) {
-                testResultHtml += `
-                <button class="btn" onclick="completePhase()">Passa al Refactoring</button>
-                `;
-            }
-        }
-        
         return `
         <div class="phase-header">
             <span class="phase-emoji">🟢</span>
@@ -678,8 +681,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <p>Ora implementa il codice necessario per far passare questo test.</p>
         
         <button class="btn" onclick="verifyTests()">Verifica Test</button>
-        
-        ${testResultHtml}
         `;
     }
 
@@ -715,8 +716,34 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         
         <p>Applica i miglioramenti che ritieni appropriati, poi prosegui.</p>
         
-        <button class="btn" onclick="completePhase()">Completa Ciclo</button>
+        <button class="btn" onclick="completeCycle()">Completa Ciclo</button>
+
+        <button class="btn" onclick="commitAndStay()">Salva Refactoring</button>
+
+        <button class="btn" onclick="commitAndGoToTest()">Passa ai Test</button>
         `;
+    }
+
+    private async commitRefactoring() {
+        try {
+            const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+            const filesToCommit = modifiedFiles
+                .split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => line.substring(3)); 
+            if (filesToCommit.length > 0) {
+                const commitTitle = await vscode.window.showInputBox({
+                    prompt: 'Inserisci il titolo del commit',
+                    placeHolder: 'Titolo del commit'
+                });
+
+                if (commitTitle) {
+                    await this._codeAnalysisService.commitChanges(this._stateManager.state, commitTitle);
+                }
+            }
+        } catch (error) {
+            console.error('Error committing changes:', error);
+        }
     }
 
     private _escapeHtml(unsafe: string): string {
