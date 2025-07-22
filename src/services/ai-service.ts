@@ -3,6 +3,7 @@ import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-mo
 import { AiClient } from './ai-client';
 import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
+import path from 'path';
 
 type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion;
 
@@ -129,7 +130,12 @@ export class AiService {
         try {
             const tenTestProposals = await this.generateTenItems<TestProposal>('testProposals', { userStory });
             
-            return await this.selectThreeItems<TestProposal>('testProposals', tenTestProposals, { userStory });
+            const finalProposals = await this.selectThreeItems<TestProposal>('testProposals', tenTestProposals, { userStory });
+
+            return finalProposals.map(proposal => ({
+                ...proposal,
+                targetFile: path.basename(proposal.targetFile ?? '')
+            }));
         } catch (error) {
             vscode.window.showErrorMessage(`Error during the generation of test proposals: ${error}`);
             return [];

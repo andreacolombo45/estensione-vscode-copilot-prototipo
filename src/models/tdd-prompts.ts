@@ -52,11 +52,14 @@ export const testProposalsConfig: AiGenerationConfig<TestProposal> = {
                         "title": "Titolo del test",
                         "description": "Descrizione del test",
                         "code": "Codice del test",
-                        "targetFile": "file/target/dove/il/test/è/implementato.js"
+                        "targetFile": "nomeDelFile.test.js"
                     },
                     ...altre proposte di test...
                 ]
-            }`,
+            }
+        IMPORTANTE: Nel campo "targetFile" inserisci SOLO il nome del file (esempio: "calculator.test.js"), 
+        NON il percorso completo. Non usare mai percorsi assoluti come "C:\\path\\to\\file.js" o relativi 
+        come "src/tests/file.js".`,
     userPrompt: 'Genera 10 proposte di test dettagliate per la user story selezionata. Ogni test deve avere un id, un titolo, una descrizione e il codice di implementazione. Nel caso in cui il progetto contenga già un file di test specifico per la user story, includi anche il percorso del file target, altrimenti creane uno nuovo.',
     selectionPrompt: `Dati questi test per la user story selezionata, seleziona i 3 test più rilevanti e utili. Considera fattori come la copertura del codice, la complessità dell\'implementazione e i casi limite.
         FORMATO DI RISPOSTA RICHIESTO:
@@ -70,11 +73,14 @@ export const testProposalsConfig: AiGenerationConfig<TestProposal> = {
                         "title": "Titolo del test",
                         "description": "Descrizione del test",
                         "code": "Codice del test",
-                        "targetFile": "file/target/dove/il/test/è/implementato.js"
+                        "targetFile": "nomeDelFile.test.js"
                     },
                     ...altre proposte di test...
                 ]
-            }`,
+            }
+        IMPORTANTE: Nel campo "targetFile" inserisci SOLO il nome del file (esempio: "calculator.test.js"), 
+        NON il percorso completo. Non usare mai percorsi assoluti come "C:\\path\\to\\file.js" o relativi 
+        come "src/tests/file.js".`,
     modelOptions: {
         model: 'deepseek/deepseek-chat-v3-0324:free',
         maxTokens: 2000,
