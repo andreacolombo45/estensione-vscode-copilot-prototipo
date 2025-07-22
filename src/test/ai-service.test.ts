@@ -241,15 +241,6 @@ suite('AiService Test Suite', () => {
         assert.deepStrictEqual(suggestions, mockRefactoringSuggestions);
     });
 
-    test("Should verify tests and return results", async () => {
-        const testResults = await aiService.verifyTests();
-
-        assert.ok(testResults);
-        assert.strictEqual(typeof testResults.success, 'boolean');
-        assert.strictEqual(typeof testResults.message, 'string');
-        assert.ok(testResults.message.length > 0);
-    });
-
     test("Should call correct methods when generating user stories", async () => {
         const generateTenItemsStub = sinon.stub(aiService as any, "generateTenItems").returns(Promise.resolve(mockUserStories));
         const selectThreeItemsStub = sinon.stub(aiService as any, "selectThreeItems").returns(Promise.resolve(mockUserStories));

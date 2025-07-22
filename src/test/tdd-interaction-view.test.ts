@@ -38,6 +38,7 @@ suite('TddInteractionView Test Suite', () => {
             insertTestCode: sinon.stub().resolves(true),
             commitChanges: sinon.stub().resolves(),
             getModifiedFiles: sinon.stub().resolves(' M src/file1.ts\n M src/file2.ts\n'),
+            runTests: sinon.stub().resolves({ success: true, output: 'All tests passed' }),
         } as any as CodeAnalysisService;
 
         sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
@@ -114,10 +115,7 @@ suite('TddInteractionView Test Suite', () => {
     });
 
     test("Should handle verifyTests message", async () => {
-        const verifyTestsStub = sinon.stub(aiService, 'verifyTests').resolves({
-            success: true,
-            message: 'All tests passed'
-        });
+        const verifyTestsStub = codeAnalysisService.runTests as sinon.SinonStub;
 
         const setTestResultsSpy = sinon.spy(stateManager, 'setTestResults');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');

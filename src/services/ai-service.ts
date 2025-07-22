@@ -153,19 +153,4 @@ export class AiService {
             return [];
         }
     }
-
-    public async verifyTests(): Promise<{ success: boolean; message: string }> {
-        try {
-            return {
-                success: true,
-                message: 'Tutti i test sono stati completati con successo!'
-            };
-        } catch (error) {
-            vscode.window.showErrorMessage(`Errore durante la verifica dei test: ${error}`);
-            return {
-                success: false,
-                message: `Errore durante l'esecuzione dei test: ${error}`
-            };
-        }
-    }
 }
