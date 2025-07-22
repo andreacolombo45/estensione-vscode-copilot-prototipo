@@ -176,6 +176,17 @@ suite('CodeAnalysisService Test Suite', () => {
     });
 
     test('Should run tests and handle success', async () => {
+        sinon.stub(vscode.workspace, 'workspaceFolders').value([
+            { uri: { fsPath: '/fake/project' } }
+        ]);
+
+        sinon.stub(codeAnalysisService as any, 'fsExistsSync').returns(true);
+        sinon.stub(codeAnalysisService as any, 'fsReadFileSync').returns(JSON.stringify({
+            scripts: {
+                test: 'jest'
+            }
+        }));
+
         const stub = sinon.stub<any, any>(codeAnalysisService as any, 'execPromise')
             .resolves({ stdout: 'Test passed' });
 
@@ -185,10 +196,21 @@ suite('CodeAnalysisService Test Suite', () => {
         assert.strictEqual(result.output, 'Test passed');
         assert.ok(stub.calledWith('npm test'));
 
-        stub.restore();
+        sinon.restore();
     });
 
     test('Should run tests and handle failure', async () => {
+        sinon.stub(vscode.workspace, 'workspaceFolders').value([
+            { uri: { fsPath: '/fake/project' } }
+        ]);
+
+        sinon.stub(codeAnalysisService as any, 'fsExistsSync').returns(true);
+        sinon.stub(codeAnalysisService as any, 'fsReadFileSync').returns(JSON.stringify({
+            scripts: {
+                test: 'jest'
+            }
+        }));
+
         const stub = sinon.stub<any, any>(codeAnalysisService as any, 'execPromise')
             .rejects(new Error('Test failed'));
 
@@ -198,7 +220,7 @@ suite('CodeAnalysisService Test Suite', () => {
         assert.strictEqual(result.output, 'Test failed');
         assert.ok(stub.calledWith('npm test'));
 
-        stub.restore();
+        sinon.restore();
     });
 
     test('Should return added lines from last commit', async () => {
