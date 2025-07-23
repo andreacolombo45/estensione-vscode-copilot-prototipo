@@ -1,15 +1,20 @@
 import * as vscode from 'vscode';
 import { TddPhase, AiMode, TddState, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
+import { version } from 'os';
 
 
 export class TddStateManager {
     private static instance: TddStateManager;
     private _state: TddState;
     private _stateEventEmitter = new vscode.EventEmitter<TddState>();
+    private _extensionContext?: vscode.ExtensionContext;
+
+    private static readonly STATE_KEY = 'tddMentorAIState';
+    private static readonly SESSION_VERSION = '1.0';
 
     public readonly onStateChanged = this._stateEventEmitter.event;
 
-    private constructor() {
+    private constructor(context?: vscode.ExtensionContext) {
         this._state = {
             currentPhase: TddPhase.PICK,
             currentMode: AiMode.ASK,
@@ -17,11 +22,14 @@ export class TddStateManager {
             userStories: [],
             refactoringSuggestions: []
         };
+        this._extensionContext = context;
     }
 
-    public static getInstance(): TddStateManager {
+    public static getInstance(context?: vscode.ExtensionContext): TddStateManager {
         if (!TddStateManager.instance) {
-            TddStateManager.instance = new TddStateManager();
+            TddStateManager.instance = new TddStateManager(context);
+        } else if (context && !TddStateManager.instance._extensionContext) {
+            TddStateManager.instance._extensionContext = context;
         }
         return TddStateManager.instance;
     }
@@ -29,6 +37,17 @@ export class TddStateManager {
     public get state(): TddState {
         return { ...this._state };
     }
+
+    private saveState(): void {
+        if (this._extensionContext) {
+            const stateToSave = {
+                version: TddStateManager.SESSION_VERSION,
+                data: this._state
+            };
+            this._extensionContext.globalState.update(TddStateManager.STATE_KEY, stateToSave);
+        }
+    }
+
 
     public setPhase(phase: TddPhase): void {
         let mode: AiMode = AiMode.ASK;
@@ -42,6 +61,7 @@ export class TddStateManager {
             currentMode: mode
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public setUserStories(stories: UserStory[]): void {
@@ -50,6 +70,7 @@ export class TddStateManager {
             userStories: stories
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public selectUserStory(storyId: string): void {
@@ -60,6 +81,7 @@ export class TddStateManager {
                 selectedUserStory: selectedStory
             };
             this._notifyStateChanged();
+            this.saveState();
         }
     }
 
@@ -69,6 +91,7 @@ export class TddStateManager {
             testProposals: tests
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public selectTestProposal(testId: string): void {
@@ -79,6 +102,7 @@ export class TddStateManager {
                 selectedTest: selectedTest
             };
             this._notifyStateChanged();
+            this.saveState();
         }
     }
 
@@ -88,6 +112,7 @@ export class TddStateManager {
             refactoringSuggestions: suggestions
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public setTestResults(success: boolean, message: string): void {
@@ -99,6 +124,7 @@ export class TddStateManager {
             }
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public setTestEditingMode(isEditing: boolean): void {
@@ -107,6 +133,7 @@ export class TddStateManager {
             isEditingTest: isEditing
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public updateModifiedSelectedTest(testCode: string, targetFile?: string): void {
@@ -123,6 +150,7 @@ export class TddStateManager {
             }
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public reset(): void {
@@ -139,6 +167,7 @@ export class TddStateManager {
             isEditingTest: false
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     public resetForNewTests(): void {
@@ -155,6 +184,7 @@ export class TddStateManager {
             selectedUserStory: this._state.selectedUserStory
         };
         this._notifyStateChanged();
+        this.saveState();
     }
 
     private _notifyStateChanged(): void {

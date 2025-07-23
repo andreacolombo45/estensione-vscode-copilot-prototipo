@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as sinon from 'sinon';
 import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase, AiMode } from '../models/tdd-models';
 
@@ -195,4 +196,44 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.modifiedSelectedTest, undefined);
         assert.strictEqual(state.selectedTest, undefined);
     });
+
+    test('Should save state when extensionContext is available', () => {
+        const mockGlobalState = {
+            update: sinon.stub().resolves(),
+            get: sinon.stub(),
+            keys: sinon.stub().returns([])
+        };
+        
+        const mockContext = {
+            globalState: mockGlobalState,
+            workspaceState: {},
+            subscriptions: [],
+            extensionUri: {} as any,
+            extensionPath: '',
+            asAbsolutePath: sinon.stub(),
+            storageUri: undefined,
+            storagePath: undefined,
+            globalStorageUri: {} as any,
+            globalStoragePath: '',
+            logUri: {} as any,
+            logPath: '',
+            extensionMode: 1,
+            extension: {} as any,
+            secrets: {} as any,
+            environmentVariableCollection: {} as any
+        } as any;
+
+        (TddStateManager as any).instance = undefined;
+        const stateManagerWithContext = TddStateManager.getInstance(mockContext);
+
+        const testStories = [{ id: '1', title: 'Test Story', description: 'Test Description' }];
+        stateManagerWithContext.setUserStories(testStories);
+
+        assert.ok(mockGlobalState.update.calledOnce);
+        
+        const [key, savedData] = mockGlobalState.update.getCall(0).args;
+        assert.strictEqual(key, 'tddMentorAIState');
+        assert.strictEqual(savedData.version, '1.0');
+        assert.deepStrictEqual(savedData.data.userStories, testStories);
+});
 });
