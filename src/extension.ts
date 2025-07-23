@@ -12,9 +12,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	console.log('Estensione "TDD-Mentor-AI" attivata!');
 
-    const stateManager = TddStateManager.getInstance();
+    const stateManager = TddStateManager.getInstance(context);
     let tddInteractionViewProvider: TddInteractionView | undefined;
     let tddCycleViewProvider: TddCycleView | undefined;
+
+    const previousSession = stateManager.loadPreviousSession();
 
     const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
     if (!apikey) {
