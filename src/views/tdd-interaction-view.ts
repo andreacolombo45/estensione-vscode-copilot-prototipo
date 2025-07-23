@@ -184,11 +184,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         }
 
         const state = this._stateManager.state;
-        
-        //if (state.currentPhase === TddPhase.PICK && state.userStories.length === 0) {
-        //    const userStories = await this._aiService.generateUserStories();
-        //    this._stateManager.setUserStories(userStories);
-        //}
 
         this._view.webview.html = await this._getHtmlForWebview(state);
     }
