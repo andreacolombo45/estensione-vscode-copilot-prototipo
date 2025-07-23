@@ -12,9 +12,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	console.log('Estensione "TDD-Mentor-AI" attivata!');
 
-    const stateManager = TddStateManager.getInstance();
+    const stateManager = TddStateManager.getInstance(context);
     let tddInteractionViewProvider: TddInteractionView | undefined;
     let tddCycleViewProvider: TddCycleView | undefined;
+
+    const previousSession = stateManager.loadPreviousSession();
 
     const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
     if (!apikey) {
@@ -69,6 +71,19 @@ export async function activate(context: vscode.ExtensionContext) {
             try {
                 if (aiService && codeAnalysisService) {
                     tddInteractionViewProvider = await TddInteractionView.create(context.extensionUri, aiService, codeAnalysisService);
+
+                    if (apikey && problemRequirements && gitService && !previousSession) {
+                        vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: 'TDD Mentor AI sta generando le user stories iniziali...',
+                            cancellable: false
+                        }, async () => {
+                            const userStories = await aiService.generateUserStories();
+                            stateManager.setUserStories(userStories);
+                            stateManager.setPhase(TddPhase.PICK);
+                            vscode.window.showInformationMessage('User stories iniziali generate con successo!');
+                        });
+                    }
                 }
             } catch (error) {
                 vscode.window.showErrorMessage(`Errore durante la creazione della vista di interazione TDD: ${error}`);
