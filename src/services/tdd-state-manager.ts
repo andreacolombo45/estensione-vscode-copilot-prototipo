@@ -48,6 +48,18 @@ export class TddStateManager {
         }
     }
 
+    public loadPreviousSession(): boolean {
+        if (!this._extensionContext) {
+            return false;
+        }
+        const savedState = this._extensionContext.globalState.get<{ version: string, data: TddState }>(TddStateManager.STATE_KEY);
+        if (savedState && savedState.version === TddStateManager.SESSION_VERSION) {
+            this._state = savedState.data;
+            this._notifyStateChanged();
+            return true;
+        }
+        return false;
+    }
 
     public setPhase(phase: TddPhase): void {
         let mode: AiMode = AiMode.ASK;

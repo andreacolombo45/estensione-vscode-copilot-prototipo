@@ -235,5 +235,57 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(key, 'tddMentorAIState');
         assert.strictEqual(savedData.version, '1.0');
         assert.deepStrictEqual(savedData.data.userStories, testStories);
-});
+    });
+
+    test('Should load previous session correctly', () => {
+        const mockSavedState = {
+            version: '1.0',
+            data: {
+                currentPhase: TddPhase.RED,
+                currentMode: AiMode.MENTOR,
+                userStories: [{ id: '1', title: 'Saved Story', description: 'Saved Description' }],
+                testProposals: [],
+                refactoringSuggestions: [],
+                selectedUserStory: { id: '1', title: 'Saved Story', description: 'Saved Description' }
+            }
+        };
+
+        const mockGlobalState = {
+            update: sinon.stub().resolves(),
+            get: sinon.stub().returns(mockSavedState),
+            keys: sinon.stub().returns([])
+        };
+        
+        const mockContext = {
+            globalState: mockGlobalState,
+            workspaceState: {},
+            subscriptions: [],
+            extensionUri: {} as any,
+            extensionPath: '',
+            asAbsolutePath: sinon.stub(),
+            storageUri: undefined,
+            storagePath: undefined,
+            globalStorageUri: {} as any,
+            globalStoragePath: '',
+            logUri: {} as any,
+            logPath: '',
+            extensionMode: 1,
+            extension: {} as any,
+            secrets: {} as any,
+            environmentVariableCollection: {} as any
+        } as any;
+
+        (TddStateManager as any).instance = undefined;
+        const stateManager = TddStateManager.getInstance(mockContext);
+
+        const hasSession = stateManager.loadPreviousSession();
+
+        assert.strictEqual(hasSession, true);
+        assert.strictEqual(mockGlobalState.get.calledOnceWith('tddMentorAIState'), true);
+        
+        const state = stateManager.state;
+        assert.strictEqual(state.currentPhase, TddPhase.RED);
+        assert.strictEqual(state.userStories.length, 1);
+        assert.strictEqual(state.userStories[0].title, 'Saved Story');
+    });
 });
