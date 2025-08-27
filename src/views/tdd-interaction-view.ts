@@ -134,10 +134,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 case 'commitAndGoToTest':
                     await this.handleRefactoringTransition('red');
                     break;
-                
-                case 'getFeedback':
-                    await this.getFeedbackAndCommit();
-                    break;
 
                 case 'proceedAfterFeedback':
                     await this.proceedWithTransition();
@@ -857,18 +853,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             }
         } catch (error) {
             vscode.window.showErrorMessage(`Error during refactoring transition: ${error}`);
-        }
-    }
-
-    private async getFeedbackAndCommit(): Promise<void> {
-        try {
-            await this.commitRefactoring();
-            const feedback = await this._aiService.generateRefactoringFeedback();
-            if (feedback) {
-                this._stateManager.setRefactoringFeedback(feedback);
-            }
-        } catch (error) {
-            vscode.window.showErrorMessage(`Error getting feedback: ${error}`);
         }
     }
 
