@@ -109,6 +109,12 @@ suite('AiService Test Suite', () => {
         ]
     };
 
+    const mockRefactoringFeedbackNoChanges: RefactoringFeedback = {
+        hasChanges: false,
+        feedback: 'Nessuna modifica al codice è stata rilevata.',
+        suggestions: []
+    };
+
     setup(async () => {
         (AiService as any).instance = undefined;
 
@@ -314,5 +320,18 @@ suite('AiService Test Suite', () => {
         });
 
         assert.deepStrictEqual(feedback, mockRefactoringFeedback);
+    });
+
+    test("Should return no changes feedback when no files are modified", async () => {
+        (codeAnalysisServiceStub.getModifiedFiles as sinon.SinonStub).resolves([]);
+        const feedback = await aiService.generateRefactoringFeedback();
+
+        assert.ok(feedback);
+
+        assert.strictEqual(feedback?.hasChanges, false);
+        assert.strictEqual(feedback?.feedback, 'Nessuna modifica al codice è stata rilevata.');
+        assert.strictEqual(feedback?.suggestions.length, 0);
+
+        assert.deepStrictEqual(feedback, mockRefactoringFeedbackNoChanges);
     });
 });
