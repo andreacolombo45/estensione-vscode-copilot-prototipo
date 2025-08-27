@@ -12,9 +12,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	console.log('Estensione "TDD-Mentor-AI" attivata!');
 
-    const stateManager = TddStateManager.getInstance();
+    const stateManager = TddStateManager.getInstance(context);
     let tddInteractionViewProvider: TddInteractionView | undefined;
     let tddCycleViewProvider: TddCycleView | undefined;
+
+    const previousSession = stateManager.loadPreviousSession();
 
     const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
     if (!apikey) {
@@ -69,6 +71,19 @@ export async function activate(context: vscode.ExtensionContext) {
             try {
                 if (aiService && codeAnalysisService) {
                     tddInteractionViewProvider = await TddInteractionView.create(context.extensionUri, aiService, codeAnalysisService);
+
+                    if (apikey && problemRequirements && gitService && !previousSession) {
+                        vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            title: 'TDD Mentor AI sta generando le user stories iniziali...',
+                            cancellable: false
+                        }, async () => {
+                            const userStories = await aiService.generateUserStories();
+                            stateManager.setUserStories(userStories);
+                            stateManager.setPhase(TddPhase.PICK);
+                            vscode.window.showInformationMessage('User stories iniziali generate con successo!');
+                        });
+                    }
                 }
             } catch (error) {
                 vscode.window.showErrorMessage(`Errore durante la creazione della vista di interazione TDD: ${error}`);
@@ -158,11 +173,13 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('tdd-mentor-ai.verify', async () => {
             vscode.window.showInformationMessage('Verifica dei test in corso...');
-            
-            const testResults = await aiService.verifyTests();
-            stateManager.setTestResults(testResults.success, testResults.message);
-            
-            if (testResults.success) {
+
+            const testResults = await codeAnalysisService?.runTests();
+            if (testResults) {
+                stateManager.setTestResults(testResults.success, testResults.output);
+            }
+
+            if (testResults?.success) {
                 vscode.window.showInformationMessage('Tutti i test sono passati!');
             } else {
                 vscode.window.showWarningMessage('Alcuni test non sono passati. Controlla il messaggio di errore.');
@@ -178,6 +195,19 @@ export async function activate(context: vscode.ExtensionContext) {
             stateManager.setUserStories(userStories);
             
             vscode.window.showInformationMessage('Fase completata! Ritorno alla fase PICK.');
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.runTests', async () => {
+            stateManager.setPhase(TddPhase.RED);
+
+            const testResults = await codeAnalysisService?.runTests();
+            if (testResults) {
+                vscode.window.showInformationMessage(`Test eseguiti: ${testResults.success ? 'Successo' : 'Fallimento'}`);
+            } else {
+                vscode.window.showErrorMessage('Errore durante l\'esecuzione dei test.');
+            }
         })
     );
 }

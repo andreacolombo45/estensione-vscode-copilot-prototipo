@@ -1,6 +1,7 @@
 import * as assert from 'assert';
+import * as sinon from 'sinon';
 import { TddStateManager } from '../services/tdd-state-manager';
-import { TddPhase, AiMode } from '../models/tdd-models';
+import { TddPhase, AiMode, RefactoringFeedback } from '../models/tdd-models';
 
 suite('TddStateManager Test Suite', () => {
     let stateManager: TddStateManager;
@@ -163,5 +164,145 @@ suite('TddStateManager Test Suite', () => {
         const state = stateManager.state;
         assert.strictEqual(state.modifiedSelectedTest?.code, 'new code');
         assert.strictEqual(state.modifiedSelectedTest?.targetFile, 'testFile.js');
+    });
+
+    test('Should reset state partially without affecting user stories', () => {
+        const stories = [
+            { id: '1', title: 'Story 1', description: 'Description 1' },
+            { id: '2', title: 'Story 2', description: 'Description 2' }
+        ];
+
+        stateManager.setUserStories(stories);
+        stateManager.selectUserStory('1');
+        stateManager.setPhase(TddPhase.REFACTORING);
+        stateManager.setTestProposals([{ id: '1', title: 'Test 1', description: 'Description 1', code: 'code1' }]);
+        stateManager.setRefactoringSuggestions([{ id: '1', title: 'Refactor 1', description: 'Description 1' }]);
+        stateManager.setTestResults(true, 'All tests passed');
+        stateManager.setTestEditingMode(true);
+        stateManager.updateModifiedSelectedTest('new code', 'testFile.js');
+        stateManager.selectTestProposal('1');
+        
+        stateManager.resetForNewTests();
+        
+        const state = stateManager.state;
+        assert.strictEqual(state.currentPhase, TddPhase.RED);
+        assert.strictEqual(state.currentMode, AiMode.MENTOR);
+        assert.deepStrictEqual(state.userStories, stories);
+        assert.strictEqual(state.selectedUserStory?.id, '1');
+        assert.strictEqual(state.testProposals.length, 0);
+        assert.strictEqual(state.refactoringSuggestions.length, 0);
+        assert.strictEqual(state.testResults, undefined);
+        assert.strictEqual(state.isEditingTest, false);
+        assert.strictEqual(state.modifiedSelectedTest, undefined);
+        assert.strictEqual(state.selectedTest, undefined);
+    });
+
+    test('Should save state when extensionContext is available', () => {
+        const mockGlobalState = {
+            update: sinon.stub().resolves(),
+            get: sinon.stub(),
+            keys: sinon.stub().returns([])
+        };
+        
+        const mockContext = {
+            globalState: mockGlobalState,
+            workspaceState: {},
+            subscriptions: [],
+            extensionUri: {} as any,
+            extensionPath: '',
+            asAbsolutePath: sinon.stub(),
+            storageUri: undefined,
+            storagePath: undefined,
+            globalStorageUri: {} as any,
+            globalStoragePath: '',
+            logUri: {} as any,
+            logPath: '',
+            extensionMode: 1,
+            extension: {} as any,
+            secrets: {} as any,
+            environmentVariableCollection: {} as any
+        } as any;
+
+        (TddStateManager as any).instance = undefined;
+        const stateManagerWithContext = TddStateManager.getInstance(mockContext);
+
+        const testStories = [{ id: '1', title: 'Test Story', description: 'Test Description' }];
+        stateManagerWithContext.setUserStories(testStories);
+
+        assert.ok(mockGlobalState.update.calledOnce);
+        
+        const [key, savedData] = mockGlobalState.update.getCall(0).args;
+        assert.strictEqual(key, 'tddMentorAIState');
+        assert.strictEqual(savedData.version, '1.0');
+        assert.deepStrictEqual(savedData.data.userStories, testStories);
+    });
+
+    test('Should load previous session correctly', () => {
+        const mockSavedState = {
+            version: '1.0',
+            data: {
+                currentPhase: TddPhase.RED,
+                currentMode: AiMode.MENTOR,
+                userStories: [{ id: '1', title: 'Saved Story', description: 'Saved Description' }],
+                testProposals: [],
+                refactoringSuggestions: [],
+                selectedUserStory: { id: '1', title: 'Saved Story', description: 'Saved Description' }
+            }
+        };
+
+        const mockGlobalState = {
+            update: sinon.stub().resolves(),
+            get: sinon.stub().returns(mockSavedState),
+            keys: sinon.stub().returns([])
+        };
+        
+        const mockContext = {
+            globalState: mockGlobalState,
+            workspaceState: {},
+            subscriptions: [],
+            extensionUri: {} as any,
+            extensionPath: '',
+            asAbsolutePath: sinon.stub(),
+            storageUri: undefined,
+            storagePath: undefined,
+            globalStorageUri: {} as any,
+            globalStoragePath: '',
+            logUri: {} as any,
+            logPath: '',
+            extensionMode: 1,
+            extension: {} as any,
+            secrets: {} as any,
+            environmentVariableCollection: {} as any
+        } as any;
+
+        (TddStateManager as any).instance = undefined;
+        const stateManager = TddStateManager.getInstance(mockContext);
+
+        const hasSession = stateManager.loadPreviousSession();
+
+        assert.strictEqual(hasSession, true);
+        assert.strictEqual(mockGlobalState.get.calledOnceWith('tddMentorAIState'), true);
+        
+        const state = stateManager.state;
+        assert.strictEqual(state.currentPhase, TddPhase.RED);
+        assert.strictEqual(state.userStories.length, 1);
+        assert.strictEqual(state.userStories[0].title, 'Saved Story');
+    });
+
+    test('Should update refactoring feedback', () => {
+        const feedback: RefactoringFeedback = { hasChanges: true, feedback: 'New feedback', suggestions: ['Suggestion 1'] };
+        stateManager.setRefactoringFeedback(feedback);
+
+        const state = stateManager.state;
+        assert.strictEqual(state.refactoringFeedback?.hasChanges, true);
+        assert.strictEqual(state.refactoringFeedback?.feedback, 'New feedback');
+        assert.deepStrictEqual(state.refactoringFeedback?.suggestions, ['Suggestion 1']);
+    });
+
+    test('Should update next phase', () => {
+        stateManager.setNextPhase('red');
+
+        const state = stateManager.state;
+        assert.strictEqual(state.nextPhase, 'red');
     });
 });
