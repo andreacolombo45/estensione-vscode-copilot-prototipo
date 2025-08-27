@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TddPhase, TddState, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
+import { TddPhase, TddState, UserStory, TestProposal, RefactoringSuggestion, RefactoringFeedback } from '../models/tdd-models';
 import { TddStateManager } from '../services/tdd-state-manager';
 import { AiService } from '../services/ai-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
@@ -124,38 +124,23 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     break;
                     
                 case 'completeCycle':
-                    try {
-                        await this.commitRefactoring();
-
-                        this._stateManager.reset();
-                        this._stateManager.setPhase(TddPhase.PICK);
-
-                        const userStories = await this._aiService.generateUserStories();
-                        this._stateManager.setUserStories(userStories);
-                    } catch (error) {
-                        console.error('Errore durante il ciclo TDD:', error);
-                    }
+                    await this.handleRefactoringTransition('pick');
                     break;
                 
                 case 'commitAndStay':
-                    await this.commitRefactoring();
+                    await this.handleRefactoringTransition('refactoring');
                     break;
                 
                 case 'commitAndGoToTest':
-                    try {
-                        await this.commitRefactoring();
-
-                        this._stateManager.resetForNewTests();
-                        this._stateManager.setPhase(TddPhase.RED);
-
-                        if (this._stateManager.state.selectedUserStory) {
-                            const testProposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
-                            this._stateManager.setTestProposals(testProposals);
-                        }
-                    } catch (error) {
-                        console.error('Errore durante il ciclo TDD:', error);
-                    }
+                    await this.handleRefactoringTransition('red');
+                    break;
                 
+                case 'getFeedback':
+                    await this.getFeedbackAndCommit();
+                    break;
+
+                case 'proceedAfterFeedback':
+                    await this.proceedWithTransition();
                     break;
 
                 case 'refreshUserStories':
@@ -447,6 +432,18 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         targetFile: targetFile
                     });
                 }
+
+                function getFeedback() {
+                    vscode.postMessage({
+                        command: 'getFeedback'
+                    });
+                }
+
+                function proceedAfterFeedback() {
+                    vscode.postMessage({
+                        command: 'proceedAfterFeedback'
+                    });
+                }
             </script>
         </body>
         </html>
@@ -680,6 +677,10 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     }
 
     private _getRefactoringPhaseHtml(refactoringSuggestions: RefactoringSuggestion[]): string {
+        const state = this._stateManager.state;
+        if (state.refactoringFeedback) {
+            return this._getRefactoringFeedbackHtml(refactoringSuggestions, state.refactoringFeedback);
+        }
         let suggestionsHtml = '';
         
         if (refactoringSuggestions.length === 0) {
@@ -711,12 +712,200 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         
         <p>Applica i miglioramenti che ritieni appropriati, poi prosegui.</p>
         
-        <button class="btn" onclick="completeCycle()">Completa Ciclo</button>
-
-        <button class="btn" onclick="commitAndStay()">Salva Refactoring</button>
-
-        <button class="btn" onclick="commitAndGoToTest()">Passa ai Test</button>
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="completeCycle()">🔄 Completa Ciclo</button>
+            <button class="btn btn-secondary" onclick="commitAndStay()">💾 Salva e Rimani</button>
+            <button class="btn btn-secondary" onclick="commitAndGoToTest()">🔴 Passa ai Test</button>
+        </div>
         `;
+    }
+
+    private _getRefactoringFeedbackHtml(refactoringSuggestions: RefactoringSuggestion[], feedback: RefactoringFeedback): string {
+        const state = this._stateManager.state;
+        const targetPhase = state.nextPhase;
+        
+        let feedbackIcon = '💭';
+
+        let suggestionsHtml = '';
+        if (feedback.suggestions.length > 0) {
+            suggestionsHtml = `
+            <div class="feedback-suggestions">
+                <h3>💡 Suggerimenti aggiuntivi:</h3>
+                <ul>
+                    ${feedback.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                </ul>
+            </div>
+            `;
+        }
+
+        let nextActionText = 'Continua';
+        switch (targetPhase) {
+            case 'pick':
+                nextActionText = 'Vai alla fase PICK';
+                break;
+            case 'red':
+                nextActionText = 'Vai ai nuovi Test';
+                break;
+            case 'refactoring':
+                nextActionText = 'Continua Refactoring';
+                break;
+        }
+        
+        return `
+        <div class="phase-header">
+            <span class="phase-emoji">📋</span>
+            <h1>Feedback sul Refactoring</h1>
+        </div>
+        
+        <div class="feedback-container">
+            <div class="feedback-header">
+                <span class="feedback-icon">${feedbackIcon}</span>
+                <h2>Feedback AI sul tuo refactoring</h2>
+            </div>
+            
+            <div class="feedback-content">
+                <p>${feedback.feedback}</p>
+                ${suggestionsHtml}
+            </div>
+        </div>
+        
+        <div class="continue-section">
+            <p>Ora puoi procedere con la fase successiva:</p>
+            <button class="btn btn-primary" onclick="proceedAfterFeedback()">
+                ✅ ${nextActionText}
+            </button>
+        </div>
+
+        <style>
+        .action-buttons {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-top: 20px;
+            }
+            
+            .feedback-container {
+                background-color: var(--vscode-input-background);
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+                border-left: 4px solid var(--vscode-activityBarBadge-background);
+            }
+            
+            .feedback-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            
+            .feedback-icon {
+                font-size: 1.5em;
+                margin-right: 10px;
+            }
+                .feedback-suggestions {
+                margin-top: 15px;
+                padding: 10px;
+                background-color: var(--vscode-editor-background);
+                border-radius: 5px;
+            }
+            
+            .feedback-suggestions h3 {
+                margin-top: 0;
+                margin-bottom: 10px;
+                color: var(--vscode-textLink-foreground);
+            }
+            
+            .feedback-suggestions ul {
+                margin: 0;
+                padding-left: 20px;
+            }
+            
+            .feedback-suggestions li {
+                margin-bottom: 5px;
+            }
+            
+            .continue-section {
+                text-align: center;
+                margin-top: 30px;
+                padding: 20px;
+                background-color: var(--vscode-input-background);
+                border-radius: 8px;
+            }
+            
+            .btn-primary {
+                background-color: var(--vscode-button-background);
+                color: var(--vscode-button-foreground);
+                font-weight: bold;
+                padding: 12px 24px;
+            }
+        </style>
+        `;
+    }
+
+    private async handleRefactoringTransition(nextPhase: 'pick' | 'red' | 'refactoring'): Promise<void> {
+        try {
+            const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+            const hasChanges = modifiedFiles && modifiedFiles.trim() !== '';
+            if (hasChanges) {
+                this._stateManager.setNextPhase(nextPhase);
+                const feedback = await this._aiService.generateRefactoringFeedback();
+                if (feedback) {
+                    this._stateManager.setRefactoringFeedback(feedback);
+                }
+            } else {
+                await this.proceedToPhase(nextPhase);
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error during refactoring transition: ${error}`);
+        }
+    }
+
+    private async getFeedbackAndCommit(): Promise<void> {
+        try {
+            await this.commitRefactoring();
+            const feedback = await this._aiService.generateRefactoringFeedback();
+            if (feedback) {
+                this._stateManager.setRefactoringFeedback(feedback);
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error getting feedback: ${error}`);
+        }
+    }
+
+    private async proceedWithTransition(): Promise<void> {
+        const nextPhase = this._stateManager.state.nextPhase;
+        if (nextPhase) {
+            await this.commitRefactoring();
+            await this.proceedToPhase(nextPhase);
+            this._stateManager.setRefactoringFeedback(undefined);
+            this._stateManager.setNextPhase(undefined);
+        }
+    }
+
+    private async proceedToPhase(phase: 'pick' | 'red' | 'refactoring'): Promise<void> {
+        switch (phase) {
+            case 'pick':
+                this._stateManager.reset();
+                this._stateManager.setPhase(TddPhase.PICK);
+                const userStories = await this._aiService.generateUserStories();
+                this._stateManager.setUserStories(userStories);
+                break;
+                
+            case 'red':
+                this._stateManager.resetForNewTests();
+                this._stateManager.setPhase(TddPhase.RED);
+                this._stateManager.setTestProposals([]);
+                if (this._stateManager.state.selectedUserStory) {
+                    const testProposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
+                    this._stateManager.setTestProposals(testProposals);
+                }
+                break;
+                
+            case 'refactoring':
+                const refactoringSuggestions = await this._aiService.generateRefactoringSuggestions();
+                this._stateManager.setRefactoringSuggestions(refactoringSuggestions);
+                break;
+        }
     }
 
     private async commitRefactoring() {
