@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as sinon from 'sinon';
 import { TddStateManager } from '../services/tdd-state-manager';
-import { TddPhase, AiMode } from '../models/tdd-models';
+import { TddPhase, AiMode, RefactoringFeedback } from '../models/tdd-models';
 
 suite('TddStateManager Test Suite', () => {
     let stateManager: TddStateManager;
@@ -287,5 +287,22 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.currentPhase, TddPhase.RED);
         assert.strictEqual(state.userStories.length, 1);
         assert.strictEqual(state.userStories[0].title, 'Saved Story');
+    });
+
+    test('Should update refactoring feedback', () => {
+        const feedback: RefactoringFeedback = { hasChanges: true, feedback: 'New feedback', suggestions: ['Suggestion 1'] };
+        stateManager.setRefactoringFeedback(feedback);
+
+        const state = stateManager.state;
+        assert.strictEqual(state.refactoringFeedback?.hasChanges, true);
+        assert.strictEqual(state.refactoringFeedback?.feedback, 'New feedback');
+        assert.deepStrictEqual(state.refactoringFeedback?.suggestions, ['Suggestion 1']);
+    });
+
+    test('Should update next phase', () => {
+        stateManager.setNextPhase('red');
+
+        const state = stateManager.state;
+        assert.strictEqual(state.nextPhase, 'red');
     });
 });

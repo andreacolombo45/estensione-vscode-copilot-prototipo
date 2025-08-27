@@ -1,4 +1,4 @@
-import { AiGenerationConfig, RefactoringSuggestion, TestProposal, UserStory } from "./tdd-models";
+import { AiGenerationConfig, RefactoringSuggestion, TestProposal, UserStory, RefactoringFeedback } from "./tdd-models";
 
 export const userStoriesConfig: AiGenerationConfig<UserStory> = {
     systemPrompt: `Sei un esperto di analisi di requisiti software. Il tuo compito è analizzare il contesto del progetto e generare 10 user stories realistiche e implementabili.
@@ -127,8 +127,32 @@ export const refactoringSuggestionsConfig: AiGenerationConfig<RefactoringSuggest
     }
 };
 
+export const refactoringFeedbackConfig: AiGenerationConfig<RefactoringFeedback> = {
+    systemPrompt: `Sei un esperto di refactoring del codice e code review. Il tuo compito è analizzare le modifiche apportate al codice durante la fase di refactoring e fornire un feedback costruttivo.
+        FORMATO DI RISPOSTA RICHIESTO:
+            Devi rispondere SOLO con un oggetto JSON senza blocchi di codice o backticks.
+            Il formato deve essere esattamente:
+
+            {
+                "hasChanges": true,
+                "feedback": "Descrizione dettagliata dei cambiamenti effettuati.",
+                "suggestions": [
+                    "Suggerimento 1",
+                    "Suggerimento 2"
+                ]
+            }`,
+    userPrompt: 'Analizza il codice e fornisci un feedback dettagliato sui cambiamenti effettuati. Valuta le qualità delle modifiche, come la riduzione della complessità, l\'eliminazione di code smell, il miglioramento della leggibilità e l\'uso di pattern riconosciuti. Indica se sono stati apportati cambiamenti significativi e fornisci suggerimenti per ulteriori miglioramenti.',
+    selectionPrompt: '',
+    modelOptions: {
+        model: 'deepseek/deepseek-chat-v3-0324:free',
+        maxTokens: 2000,
+        temperature: 0.7
+    }
+};
+
 export const aiConfigs = {
     userStories: userStoriesConfig,
     testProposals: testProposalsConfig,
-    refactoringSuggestions: refactoringSuggestionsConfig
+    refactoringSuggestions: refactoringSuggestionsConfig,
+    refactoringFeedback: refactoringFeedbackConfig
 };

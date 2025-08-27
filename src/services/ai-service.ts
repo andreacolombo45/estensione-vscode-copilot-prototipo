@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
+import { UserStory, TestProposal, RefactoringSuggestion, RefactoringFeedback } from '../models/tdd-models';
 import { AiClient } from './ai-client';
 import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
 import path from 'path';
 
-type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion;
+type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion | RefactoringFeedback;
 
 export class AiService {
     private static instance: AiService;
@@ -145,12 +145,50 @@ export class AiService {
     public async generateRefactoringSuggestions(): Promise<RefactoringSuggestion[]> {
         try {
             const implementedCode = await this.codeAnalysisService.getImplementedCode();
-            const tenRefactoringSuggestions = await this.generateTenItems<RefactoringSuggestion>('refactoringSuggestions' ,{ implementedCode });
+            const tenRefactoringSuggestions = await this.generateTenItems<RefactoringSuggestion>('refactoringSuggestions', { implementedCode });
 
             return await this.selectThreeItems<RefactoringSuggestion>('refactoringSuggestions', tenRefactoringSuggestions);
         } catch (error) {
             vscode.window.showErrorMessage(`Error during the generation of refactoring suggestions: ${error}`);
             return [];
+        }
+    }
+
+    public async generateRefactoringFeedback(): Promise<RefactoringFeedback | null> {
+        try {
+            const modifiedFiles = await this.codeAnalysisService.getModifiedFiles();
+            if (modifiedFiles.length === 0) {
+                return {
+                    hasChanges: false,
+                    feedback: 'Nessuna modifica al codice è stata rilevata.',
+                    suggestions: []
+                };
+            }
+
+            const implementedCode = await this.codeAnalysisService.getImplementedCode();
+            const projectContext = await this.getProjectContext();
+        
+            const config = this.configs.refactoringFeedback;
+            const userPrompt = config.userPrompt;
+
+            const response = await this.aiClient.sendRequest<RefactoringFeedback>(
+                userPrompt, 
+                {
+                    systemPrompt: config.systemPrompt,
+                    model: config.modelOptions?.model,
+                    maxTokens: config.modelOptions?.maxTokens,
+                    temperature: config.modelOptions?.temperature,
+                    context: { ...projectContext, modifiedFiles, implementedCode }
+            });
+
+            if (response) {
+                return response;
+            } else {
+                throw new Error('Response format is invalid.');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error during the generation of refactoring feedback: ${error}`);
+            return null;
         }
     }
 }

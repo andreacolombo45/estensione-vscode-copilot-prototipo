@@ -30,6 +30,12 @@ export interface RefactoringSuggestion {
     description: string;
 }
 
+export interface RefactoringFeedback {
+    hasChanges: boolean;
+    feedback: string;
+    suggestions: string[];
+}
+
 export interface TddState {
     currentPhase: TddPhase;
     currentMode: AiMode;
@@ -39,11 +45,13 @@ export interface TddState {
     testProposals: TestProposal[];
     userStories: UserStory[];
     refactoringSuggestions: RefactoringSuggestion[];
+    refactoringFeedback?: RefactoringFeedback;
     testResults?: {
         success: boolean;
         message: string;
     };
     isEditingTest?: boolean;
+    nextPhase?: 'pick' | 'red' | 'refactoring';
 }
 
 export interface AiRequestOptions {
