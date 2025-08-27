@@ -279,6 +279,35 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setRefactoringFeedbackSpy.calledOnce, 'setRefactoringFeedback should be called');
     });
 
+    test("Should handle commitAndStay message with no changes", async () => {
+        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback');
+        const generateRefactoringSuggestionsStub = sinon.stub(aiService, 'generateRefactoringSuggestions').resolves([
+            { id: 'suggestion1', title: 'Suggestion 1', description: 'Description 1' },
+            { id: 'suggestion2', title: 'Suggestion 2', description: 'Description 2' }
+        ]);
+        const setRefactoringSuggestionsSpy = sinon.spy(stateManager, 'setRefactoringSuggestions');
+
+        getModifiedFilesStub.resetHistory();
+        getModifiedFilesStub.resolves('');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'commitAndStay' });
+
+        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
+        assert.ok(generateRefactoringFeedbackStub.notCalled, 'generateRefactoringFeedback should not be called when there are no changes');
+        assert.ok(generateRefactoringSuggestionsStub.calledOnce, 'generateRefactoringSuggestions should be called to refresh suggestions');
+        assert.ok(setRefactoringSuggestionsSpy.calledWith([
+            { id: 'suggestion1', title: 'Suggestion 1', description: 'Description 1' },
+            { id: 'suggestion2', title: 'Suggestion 2', description: 'Description 2' }
+        ]), 'setRefactoringSuggestions should be called to update suggestions');
+    });
+
     test("Should handle cancelEditTest message", async () => {
         const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
