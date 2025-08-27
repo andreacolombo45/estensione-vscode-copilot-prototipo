@@ -337,6 +337,44 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setRefactoringFeedbackSpy.calledOnce, 'setRefactoringFeedback should be called');
     });
 
+    test("Should handle commitAndGoToTest message with no changes", async () => {
+        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback');
+        const generateTestProposalsStub = sinon.stub(aiService, 'generateTestProposals').resolves([
+            { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' },
+            { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
+        ]);
+
+        stateManager.setUserStories([{ id: 'us1', title: 'User Story 1', description: 'Description 1' }]);
+        stateManager.selectUserStory('us1');
+
+        const resetForNewTestsSpy = sinon.spy(stateManager, 'resetForNewTests');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const setTestProposalsSpy = sinon.spy(stateManager, 'setTestProposals');
+
+        getModifiedFilesStub.resetHistory();
+        getModifiedFilesStub.resolves('');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'commitAndGoToTest' });
+
+        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
+        assert.ok(generateRefactoringFeedbackStub.notCalled, 'generateRefactoringFeedback should not be called when there are no changes');
+        assert.ok(generateTestProposalsStub.calledOnce, 'generateTestProposals should be called to refresh tests');
+        assert.ok(resetForNewTestsSpy.calledOnce, 'resetForNewTests should be called to reset state for new tests');
+        assert.ok(setPhaseSpy.calledWith(TddPhase.RED), 'setPhase should be called with red');
+        assert.ok(setTestProposalsSpy.calledWith([]));
+        assert.ok(setTestProposalsSpy.calledWith([
+            { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' },
+            { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
+        ]));
+    });
+
     test("Should handle cancelEditTest message", async () => {
         const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
