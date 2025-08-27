@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TddPhase, AiMode, TddState, UserStory, TestProposal, RefactoringSuggestion } from '../models/tdd-models';
+import { TddPhase, AiMode, TddState, UserStory, TestProposal, RefactoringSuggestion, RefactoringFeedback } from '../models/tdd-models';
 import { version } from 'os';
 
 
@@ -161,6 +161,12 @@ export class TddStateManager {
                 targetFile: targetFile || this._state.selectedTest.targetFile
             }
         };
+        this._notifyStateChanged();
+        this.saveState();
+    }
+
+    public setRefactoringFeedback(feedback: RefactoringFeedback | undefined): void {
+        this._state.refactoringFeedback = feedback;
         this._notifyStateChanged();
         this.saveState();
     }
