@@ -308,6 +308,35 @@ suite('TddInteractionView Test Suite', () => {
         ]), 'setRefactoringSuggestions should be called to update suggestions');
     });
 
+    test('Should handle commitAndGoToTest message', async () => {
+        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback')
+            .resolves({
+                hasChanges: true,
+                feedback: 'Good refactoring!',
+                suggestions: ['Add more tests']
+            });
+        
+        const setNextPhaseSpy = sinon.spy(stateManager, 'setNextPhase');
+        const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
+        
+        getModifiedFilesStub.resetHistory();
+        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'commitAndGoToTest' });
+
+        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
+        assert.ok(generateRefactoringFeedbackStub.calledOnce, 'generateRefactoringFeedback should be called when there are changes');
+        assert.ok(setNextPhaseSpy.calledWith('red'), 'setNextPhase should be called with red');
+        assert.ok(setRefactoringFeedbackSpy.calledOnce, 'setRefactoringFeedback should be called');
+    });
+
     test("Should handle cancelEditTest message", async () => {
         const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
