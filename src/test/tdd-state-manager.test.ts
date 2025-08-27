@@ -298,4 +298,11 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.refactoringFeedback?.feedback, 'New feedback');
         assert.deepStrictEqual(state.refactoringFeedback?.suggestions, ['Suggestion 1']);
     });
+
+    test('Should update next phase', () => {
+        stateManager.setNextPhase('red');
+
+        const state = stateManager.state;
+        assert.strictEqual(state.nextPhase, 'red');
+    });
 });

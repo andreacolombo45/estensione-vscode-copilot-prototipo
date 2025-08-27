@@ -51,7 +51,7 @@ export interface TddState {
         message: string;
     };
     isEditingTest?: boolean;
-    transition?: 'pick' | 'red' | 'refactoring';
+    nextPhase?: 'pick' | 'red' | 'refactoring';
 }
 
 export interface AiRequestOptions {

@@ -171,6 +171,12 @@ export class TddStateManager {
         this.saveState();
     }
 
+    public setNextPhase(phase: 'pick' | 'red' | 'refactoring' | undefined): void {
+        this._state.nextPhase = phase;
+        this._notifyStateChanged();
+        this.saveState();
+    }
+
     public reset(): void {
         this._state = {
             currentPhase: TddPhase.PICK,
