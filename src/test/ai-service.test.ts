@@ -5,6 +5,7 @@ import { AiService } from '../services/ai-service';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { AiClient } from '../services/ai-client';
 import { GitService } from '../services/git-service';
+import { RefactoringFeedback } from '../models/tdd-models';
 
 suite('AiService Test Suite', () => {
     let aiService: AiService;
@@ -98,6 +99,16 @@ suite('AiService Test Suite', () => {
         }
     ];
 
+    const mockRefactoringFeedback: RefactoringFeedback = {
+        hasChanges: true,
+        feedback: 'Le modifiche apportate mostrano un buon miglioramento della qualità del codice. È stata ridotta la duplicazione e migliorata la leggibilità.',
+        suggestions: [
+            'Considera l\'aggiunta di documentazione per i nuovi metodi',
+            'Implementa test unitari per le nuove funzionalità',
+            'Valuta l\'uso di TypeScript per migliorare la type safety'
+        ]
+    };
+
     setup(async () => {
         (AiService as any).instance = undefined;
 
@@ -133,14 +144,23 @@ suite('AiService Test Suite', () => {
             sinon.match.has('systemPrompt', sinon.match(/refactoring/i))
         ).resolves({ items: mockRefactoringSuggestions });
 
+        sendRequestStub.withArgs(
+            sinon.match.any,
+            sinon.match.has('systemPrompt', sinon.match(/refactoring.*feedback/i))
+        ).resolves(mockRefactoringFeedback);
+
         const getProjectStructureStub = sinon.stub().resolves({ files: [], folders: [] });
         const getCommitHistoryStub = sinon.stub().resolves({ commits: [] });
         const getImplementedCodeStub = sinon.stub().resolves({ code: '' });
+        const getProjectContextStub = sinon.stub().resolves({ context: '' });
+        const getModifiedFilesStub = sinon.stub().resolves(['src/utils/helper.js', 'src/models/user.js']);
 
         codeAnalysisServiceStub = {
             getProjectStructure: getProjectStructureStub,
             getCommitHistory: getCommitHistoryStub,
-            getImplementedCode: getImplementedCodeStub
+            getImplementedCode: getImplementedCodeStub,
+            getProjectContext: getProjectContextStub,
+            getModifiedFiles: getModifiedFilesStub
         } as any;
 
         sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
@@ -278,5 +298,21 @@ suite('AiService Test Suite', () => {
         assert.ok(generateTenItemsStub.calledOnce);
         assert.ok(selectThreeItemsStub.calledOnce);
         assert.deepStrictEqual(suggestions, mockRefactoringSuggestions);
+    });
+
+    test("Should generate refactoring feedback", async () => {
+        const feedback = await aiService.generateRefactoringFeedback();
+
+        assert.ok(feedback);
+
+        assert.strictEqual(typeof feedback?.hasChanges, 'boolean');
+        assert.strictEqual(typeof feedback?.feedback, 'string');
+        assert.ok(Array.isArray(feedback?.suggestions));
+
+        feedback?.suggestions.forEach(suggestion => {
+            assert.strictEqual(typeof suggestion, 'string');
+        });
+
+        assert.deepStrictEqual(feedback, mockRefactoringFeedback);
     });
 });
