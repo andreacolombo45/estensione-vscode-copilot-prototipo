@@ -192,6 +192,40 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setRefactoringFeedbackSpy.calledOnce, 'setRefactoringFeedback should be called');
     });
 
+    test("Should handle completeCycle message with no changes", async () => {
+        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([
+            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+        ]);
+        const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback');
+
+        const resetSpy = sinon.spy(stateManager, 'reset');
+        const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
+        const setUserStoriesSpy = sinon.spy(stateManager, 'setUserStories');
+
+        getModifiedFilesStub.resetHistory();
+        getModifiedFilesStub.resolves('');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'completeCycle' });
+
+        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
+        assert.ok(generateRefactoringFeedbackStub.notCalled, 'generateRefactoringFeedback should not be called when there are no changes');
+        assert.ok(resetSpy.calledOnce, 'reset should be called');
+        assert.ok(setPhaseSpy.calledWith(TddPhase.PICK), 'setPhase should be called with pick');
+        assert.ok(generateUserStoriesStub.calledOnce, 'generateUserStories should be called');
+        assert.ok(setUserStoriesSpy.calledWith([
+            { id: '1', title: 'Test User Story 1', description: 'Description 1' },
+            { id: '2', title: 'Test User Story 2', description: 'Description 2' }
+        ]), 'setUserStories should be called with user stories');
+    });
+
     test("Should handle confirmTestCode message", async () => {
         const setTestEditingModeSpy = sinon.spy(stateManager, 'setTestEditingMode');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
