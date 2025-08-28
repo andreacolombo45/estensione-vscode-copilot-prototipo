@@ -43,27 +43,27 @@ suite('CodeAnalysisService Test Suite', () => {
         const getAllFilesStub = sinon.stub(codeAnalysisService as any, 'getAllFiles');
         
         const mockFiles = [
-            '/mock/workspace/src/main.ts',
-            '/mock/workspace/src/utils.js',
-            '/mock/workspace/tests/main.test.ts',
-            '/mock/workspace/tests/utils.spec.js',
-            '/mock/workspace/package.json'
+            '/mock/workspace/src/main/java/com/example/Main.java',
+            '/mock/workspace/src/main/java/com/example/Calculator.java',
+            '/mock/workspace/src/test/java/com/example/MainTest.java',
+            '/mock/workspace/src/test/java/com/example/CalculatorTest.java',
+            '/mock/workspace/build.gradle'
         ];
 
         getAllFilesStub.resolves(mockFiles);
         
         const result = await codeAnalysisService.getProjectStructure();
         
-        assert.strictEqual(result.language, 'typescript'); 
+        assert.strictEqual(result.language, 'java'); 
         assert.strictEqual(result.hasTests, true);
         assert.ok(result.testFiles.length > 0);
         assert.ok(result.sourceFiles.length > 0);
         
-        assert.ok(result.testFiles.some(file => file.includes('main.test.ts')));
-        assert.ok(result.testFiles.some(file => file.includes('utils.spec.js')));
+        assert.ok(result.testFiles.some(file => file.includes('MainTest.java')));
+        assert.ok(result.testFiles.some(file => file.includes('CalculatorTest.java')));
         
         assert.ok(result.sourceFiles.every(file => 
-            !file.includes('.test.') && !file.includes('.spec.')
+            !file.includes('Test.java') && !file.includes('Tests.java')
         ));
     });
 
@@ -72,7 +72,7 @@ suite('CodeAnalysisService Test Suite', () => {
         
         const result = await codeAnalysisService.getProjectStructure();
         
-        assert.strictEqual(result.language, 'unknown');
+        assert.strictEqual(result.language, 'java');
         assert.strictEqual(result.hasTests, false);
         assert.strictEqual(result.testFiles.length, 0);
         assert.strictEqual(result.sourceFiles.length, 0);
@@ -87,7 +87,7 @@ suite('CodeAnalysisService Test Suite', () => {
 
         const result = await codeAnalysisService.getProjectStructure();
 
-        assert.strictEqual(result.language, 'javascript');
+        assert.strictEqual(result.language, 'java');
         assert.strictEqual(result.hasTests, false);
         assert.strictEqual(result.testFiles.length, 0);
         assert.strictEqual(result.sourceFiles.length, 0);
@@ -100,19 +100,19 @@ suite('CodeAnalysisService Test Suite', () => {
         
         const mockFiles = [
             '/mock/workspace/image.png',
-            '/mock/workspace/build/output.exe',
+            '/mock/workspace/build/output.jar',
             '/mock/workspace/logs/app.log',
-            '/mock/workspace/src/app.py'
+            '/mock/workspace/src/main/java/com/example/App.java'
         ];
 
         getAllFilesStub.resolves(mockFiles);
         
         const result = await codeAnalysisService.getProjectStructure();
         
-        assert.strictEqual(result.language, 'python');
+        assert.strictEqual(result.language, 'java');
         assert.strictEqual(result.hasTests, false);
         assert.strictEqual(result.sourceFiles.length, 1);
-        assert.ok(result.sourceFiles[0].endsWith('app.py'));
+        assert.ok(result.sourceFiles[0].endsWith('App.java'));
     });
 
     test('Should return recent commit history', async () => {
@@ -125,32 +125,51 @@ suite('CodeAnalysisService Test Suite', () => {
     });
 
     test('Should append code to existing test file', async () => {
-        const testFilePath = '/mock/workspace/tests/example.test.js';
-        const testCode = 'testCode';
+        const testFilePath = '/mock/workspace/src/test/java/com/example/ExampleTest.java';
+        const testCode = `@Test
+    public void testExample() {
+        assertTrue(true);
+    }`;
         workspaceFoldersStub = sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: { fsPath: '/mock/workspace' }, name: 'mock-workspace', index: 0 }]);
 
         sinon.stub(codeAnalysisService as any, 'getAllFiles').resolves([testFilePath]);
 
-        const readFileStub = sinon.stub(fs.promises, 'readFile').resolves('existing content');
+        const existingJavaContent = `package com.example;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class ExampleTest {
+    // I test verranno aggiunti qui
+}`;
+
+        const readFileStub = sinon.stub(fs.promises, 'readFile').resolves(existingJavaContent);
         const writeFileStub = sinon.stub(fs.promises, 'writeFile').resolves();
 
         sinon.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
         sinon.stub(vscode.window, 'showTextDocument').resolves();
 
-        const success = await codeAnalysisService.insertTestCode(testCode, 'example.test.js');
+        const success = await codeAnalysisService.insertTestCode(testCode, 'ExampleTest.java');
 
         assert.strictEqual(success, true);
         assert.ok(readFileStub.calledWith(testFilePath));
         assert.ok(writeFileStub.calledWith(
             testFilePath,
-            sinon.match((value: string | string[]) => value.includes('existing content') && value.includes(testCode))
+            sinon.match((value: string) => 
+                value.includes('package com.example') && 
+                value.includes(testCode) &&
+                value.includes('public class ExampleTest')
+            )
         ));
     });
 
     test('Should create new test file if it does not exist', async () => {
         const mockFsPath = '/mock/workspace';
-        const testFilePath = path.join(mockFsPath, 'tests', 'new.test.js');
-        const testCode = 'testCode';
+        const testFilePath = path.join(mockFsPath, 'src', 'test', 'java', 'NewTest.java');
+        const testCode = `@Test
+    public void testNew() {
+        assertTrue(true);
+    }`;
 
         sinon.stub(vscode.workspace, 'workspaceFolders').value([
             { uri: { fsPath: mockFsPath } }
@@ -160,19 +179,25 @@ suite('CodeAnalysisService Test Suite', () => {
 
         const mkdirStub = sinon.stub(fs.promises, 'mkdir').resolves();
         const writeFileStub = sinon.stub(fs.promises, 'writeFile').resolves();
-        sinon.stub(fs.promises, 'readFile').resolves('');
+
+        const javaTemplate = `package test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class NewTest {
+    // I test verranno aggiunti qui
+}`;
+        sinon.stub(fs.promises, 'readFile').resolves(javaTemplate);
 
         sinon.stub(vscode.workspace, 'openTextDocument').resolves({} as any);
         sinon.stub(vscode.window, 'showTextDocument').resolves();
 
-        const success = await codeAnalysisService.insertTestCode(testCode, 'new.test.js');
+        const success = await codeAnalysisService.insertTestCode(testCode, 'NewTest.java');
 
         assert.strictEqual(success, true);
         assert.ok(mkdirStub.called);
-        assert.ok(writeFileStub.calledWith(
-            testFilePath,
-            sinon.match((value: string | string[]) => value.includes(testCode))
-        ));
+        assert.ok(writeFileStub.calledTwice);
     });
 
     test('Should run tests and handle success', async () => {
@@ -181,20 +206,17 @@ suite('CodeAnalysisService Test Suite', () => {
         ]);
 
         sinon.stub(codeAnalysisService as any, 'fsExistsSync').returns(true);
-        sinon.stub(codeAnalysisService as any, 'fsReadFileSync').returns(JSON.stringify({
-            scripts: {
-                test: 'jest'
-            }
-        }));
 
-        const stub = sinon.stub<any, any>(codeAnalysisService as any, 'execPromise')
-            .resolves({ stdout: 'Test passed' });
+        const execStub = sinon.stub<any, any>(codeAnalysisService as any, 'execPromise');
+
+        execStub.onFirstCall().resolves({ stdout: 'Gradle 7.6' });
+        execStub.onSecondCall().resolves({ stdout: 'BUILD SUCCESSFUL\n5 tests completed' });
 
         const result = await codeAnalysisService.runTests();
 
         assert.strictEqual(result.success, true);
-        assert.strictEqual(result.output, 'Test passed');
-        assert.ok(stub.calledWith('npm test'));
+        assert.strictEqual(result.output, 'BUILD SUCCESSFUL\n5 tests completed');
+        assert.ok(execStub.calledWith('./gradlew test', { cwd: '/fake/project' }));
 
         sinon.restore();
     });
@@ -205,20 +227,20 @@ suite('CodeAnalysisService Test Suite', () => {
         ]);
 
         sinon.stub(codeAnalysisService as any, 'fsExistsSync').returns(true);
-        sinon.stub(codeAnalysisService as any, 'fsReadFileSync').returns(JSON.stringify({
-            scripts: {
-                test: 'jest'
-            }
-        }));
 
-        const stub = sinon.stub<any, any>(codeAnalysisService as any, 'execPromise')
-            .rejects(new Error('Test failed'));
+        const execStub = sinon.stub<any, any>(codeAnalysisService as any, 'execPromise');
+        execStub.withArgs('gradle --version', { cwd: '/fake/project' }).resolves({ stdout: 'Gradle 7.6' });
+        
+        const testError = new Error('Command failed') as any;
+        testError.stdout = 'BUILD FAILED\n2 tests failed';
+        testError.stderr = '';
+        execStub.withArgs('./gradlew test', sinon.match.any).rejects(testError);
+        execStub.withArgs('gradle test', sinon.match.any).rejects(testError);
 
         const result = await codeAnalysisService.runTests();
 
         assert.strictEqual(result.success, false);
-        assert.strictEqual(result.output, 'Test failed');
-        assert.ok(stub.calledWith('npm test'));
+        assert.strictEqual(result.output, 'BUILD FAILED\n2 tests failed');
 
         sinon.restore();
     });
@@ -235,16 +257,17 @@ suite('CodeAnalysisService Test Suite', () => {
         getRecentCommitsStub.resolves([mockCommit]);
         const showCommitDetailsStub = gitServiceStub.showCommitDetails as sinon.SinonStub;
         showCommitDetailsStub.resolves(`
-diff --git a/file.ts b/file.ts
-+++ b/file.ts
-+const a = 1;
-+function test() { return a; }
--someRemovedLine()
+diff --git a/Main.java b/Main.java
++++ b/Main.java
++public class Calculator {
++    public int add(int a, int b) { return a + b; }
++}
+-// TODO: implement
 `);
 
         const result = await codeAnalysisService.getImplementedCode();
 
-        assert.strictEqual(result, 'const a = 1;\nfunction test() { return a; }');
+        assert.strictEqual(result, 'public class Calculator {\n    public int add(int a, int b) { return a + b; }\n}');
         assert.ok(getRecentCommitsStub.calledOnceWith(1));
         assert.ok(showCommitDetailsStub.calledOnceWith(['abc123']));
     });
@@ -289,12 +312,12 @@ diff --git a/file.ts b/file.ts
                 id: 'test1',
                 title: 'Implement feature X',
                 description: 'This test implements feature X',
-                code: 'test code here',
-                targetFile: 'src/featureX.ts'
+                code: '@Test\npublic void testAdd() { assertEquals(5, calculator.add(2, 3)); }',
+                targetFile: 'CalculatorTest.java'
             }
         };
 
-        const modifiedFiles = ' M src/file1.ts\n M src/file2.ts\n';
+        const modifiedFiles = ' M src/main/java/Calculator.java\n M src/test/java/CalculatorTest.java\n';
         const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
         getModifiedFilesStub.resolves(modifiedFiles);
 
@@ -304,7 +327,10 @@ diff --git a/file.ts b/file.ts
         await codeAnalysisService.commitChanges(mockState);
 
         assert.ok(getModifiedFilesStub.calledOnce);
-        assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'GREEN: Implement feature X'));
+        assert.ok(commitFilesStub.calledOnceWith(
+            ['src/main/java/Calculator.java', 'src/test/java/CalculatorTest.java'], 
+            'GREEN: Implement feature X'
+        ));
     });
 
     test('Should commit changes with REFACTORING phase', async () => {
@@ -316,16 +342,16 @@ diff --git a/file.ts b/file.ts
             refactoringSuggestions: [],
         };
 
-        const modifiedFiles = ' M src/file1.ts\n M src/file2.ts\n';
+        const modifiedFiles = ' M src/main/java/Calculator.java\n M src/test/java/CalculatorTest.java\n';
         const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
         getModifiedFilesStub.resolves(modifiedFiles);
 
         const commitFilesStub = gitServiceStub.commitFiles as sinon.SinonStub;
         commitFilesStub.resolves();
 
-        await codeAnalysisService.commitChanges(mockState, 'Refactor code');
+        await codeAnalysisService.commitChanges(mockState, 'Refactor Calculator class');
 
         assert.ok(getModifiedFilesStub.calledOnce);
-        assert.ok(commitFilesStub.calledOnceWith(['src/file1.ts', 'src/file2.ts'], 'REFACTORING: Refactor code'));
+        assert.ok(commitFilesStub.calledOnceWith(['src/main/java/Calculator.java', 'src/test/java/CalculatorTest.java'], 'REFACTORING: Refactor Calculator class'));
     });
 });
