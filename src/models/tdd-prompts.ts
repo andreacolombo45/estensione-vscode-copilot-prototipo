@@ -33,7 +33,7 @@ export const userStoriesConfig: AiGenerationConfig<UserStory> = {
                 ]
             }`,
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: 'google/gemma-3-27b-it:free',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -82,7 +82,7 @@ export const testProposalsConfig: AiGenerationConfig<TestProposal> = {
         NON il percorso completo. Non usare mai percorsi assoluti come "C:\\path\\to\\file.js" o relativi 
         come "src/tests/file.js".`,
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: 'google/gemma-3-27b-it:free',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -121,7 +121,7 @@ export const refactoringSuggestionsConfig: AiGenerationConfig<RefactoringSuggest
                 ]
             }`,
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: 'google/gemma-3-27b-it:free',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -144,7 +144,7 @@ export const refactoringFeedbackConfig: AiGenerationConfig<RefactoringFeedback> 
     userPrompt: 'Analizza il codice e fornisci un feedback dettagliato sui cambiamenti effettuati. Valuta le qualità delle modifiche, come la riduzione della complessità, l\'eliminazione di code smell, il miglioramento della leggibilità e l\'uso di pattern riconosciuti. Indica se sono stati apportati cambiamenti significativi e fornisci suggerimenti per ulteriori miglioramenti.',
     selectionPrompt: '',
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: 'google/gemma-3-27b-it:free',
         maxTokens: 2000,
         temperature: 0.7
     }
