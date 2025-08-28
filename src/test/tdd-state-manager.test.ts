@@ -120,6 +120,8 @@ suite('TddStateManager Test Suite', () => {
         stateManager.selectUserStory('1');
         stateManager.selectTestProposal('1');
         stateManager.updateModifiedSelectedTest('new code', 'testFile.js');
+        stateManager.setRefactoringFeedback({ hasChanges: true, feedback: 'Looks good!', suggestions: [] });
+        stateManager.setNextPhase('refactoring');
 
         stateManager.reset();
         const state = stateManager.state;
@@ -133,7 +135,9 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.testResults, undefined);
         assert.strictEqual(state.isEditingTest, false);
         assert.strictEqual(state.modifiedSelectedTest, undefined);
-    }); 
+        assert.strictEqual(state.refactoringFeedback, undefined);
+        assert.strictEqual(state.nextPhase, undefined);
+    });
 
     test("Should notify listeners on state change", (done) => {
         stateManager.onStateChanged(() => {
@@ -181,7 +185,9 @@ suite('TddStateManager Test Suite', () => {
         stateManager.setTestEditingMode(true);
         stateManager.updateModifiedSelectedTest('new code', 'testFile.js');
         stateManager.selectTestProposal('1');
-        
+        stateManager.setRefactoringFeedback({ hasChanges: true, feedback: 'Looks good!', suggestions: [] });
+        stateManager.setNextPhase('refactoring');
+
         stateManager.resetForNewTests();
         
         const state = stateManager.state;
@@ -195,6 +201,8 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.isEditingTest, false);
         assert.strictEqual(state.modifiedSelectedTest, undefined);
         assert.strictEqual(state.selectedTest, undefined);
+        assert.strictEqual(state.refactoringFeedback, undefined);
+        assert.strictEqual(state.nextPhase, undefined);
     });
 
     test('Should save state when extensionContext is available', () => {
