@@ -6,7 +6,7 @@ import { TddPhase, TddState } from '../models/tdd-models';
 import { exec } from 'child_process';
 import {promisify} from 'util';
 
-const IGNORED_DIRS = ['node_modules', '.git', '.vscode', 'dist', 'build', 'out'];
+const IGNORED_DIRS = ['node_modules', '.git', '.vscode', 'dist', 'build', 'out', '.gradle', 'gradle'];
 
 export class CodeAnalysisService {
     private static instance: CodeAnalysisService;
@@ -39,16 +39,39 @@ export class CodeAnalysisService {
             );
 
             if (!testFilePath) {
-                testFilePath = path.join(rootPath, 'tests', targetFile);
+                const testDir = path.join(rootPath, 'src', 'test', 'java');
+                testFilePath = path.join(testDir, targetFile);
                 const dir = path.dirname(testFilePath);
 
                 await fs.promises.mkdir(dir, { recursive: true });
-                await fs.promises.writeFile(testFilePath, '');
+                const packageName = this.extractPackageFromTestFile(targetFile);
+                const className = path.basename(targetFile, '.java');
+                const baseTemplate = `package ${packageName};
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class ${className} {
+    // I test verranno aggiunti qui
+}
+`;
+                await fs.promises.writeFile(testFilePath, baseTemplate);
             }
 
             const currentContent = await fs.promises.readFile(testFilePath, 'utf8');
 
-            const updatedContent = `${currentContent.trim()}\n\n${testCode.trim()}\n`;
+            const lastBraceIndex = currentContent.lastIndexOf('}');
+            if (lastBraceIndex === -1) {
+                throw new Error('Formato del file di test non valido');
+            }
+
+            const beforeLastBrace = currentContent.substring(0, lastBraceIndex);
+            const afterLastBrace = currentContent.substring(lastBraceIndex);
+
+            const updatedContent = `${beforeLastBrace}
+    ${testCode.trim()}
+
+${afterLastBrace}`;
 
             await fs.promises.writeFile(testFilePath, updatedContent);
 
@@ -61,6 +84,14 @@ export class CodeAnalysisService {
             return false;
         }
     }
+
+    private extractPackageFromTestFile(fileName: string): string {
+        const pathParts = fileName.split('/');
+        if (pathParts.length > 1) {
+            return pathParts.slice(0, -1).join('.');
+        }
+        return 'test'; 
+    }
     
     public async runTests(): Promise<{ success: boolean; output: string }> {
         try {
@@ -70,20 +101,20 @@ export class CodeAnalysisService {
             }
 
             const rootPath = workspaceFolders[0].uri.fsPath;
-            const packageJsonPath = path.join(rootPath, 'package.json');
+            const buildGradlePath = path.join(rootPath, 'build.gradle');
+            const settingsGradlePath = path.join(rootPath, 'settings.gradle');
 
-            if (!this.fsExistsSync(packageJsonPath)) {
-                const createAction = 'Crea package.json';
+            if (!this.fsExistsSync(buildGradlePath)) {
+                const createAction = 'Crea build.gradle';
                 const cancelAction = 'Annulla';
                 
                 const choice = await vscode.window.showWarningMessage(
-                    'Non è stato trovato un file package.json nel progetto. Vuoi crearne uno per eseguire i test?',
+                    'Non è stato trovato un file build.gradle nel progetto. Vuoi crearne uno per eseguire i test?',
                     createAction, cancelAction
                 );
                 
                 if (choice === createAction) {
-                    console.log('1');
-                    const result = await this.createPackageJson();
+                    const result = await this.createGradleProject();
                     if (!result.success) {
                         return { success: false, output: result.message };
                     }
@@ -94,35 +125,29 @@ export class CodeAnalysisService {
                 }
             } else {
                 try {
-                    const packageJson = JSON.parse(this.fsReadFileSync(packageJsonPath, 'utf8'));
-                    if (!packageJson.scripts || !packageJson.scripts.test) {
-                        const fixAction = 'Ripara package.json';
-                        const cancelAction = 'Annulla';
-                        
-                        const choice = await vscode.window.showWarningMessage(
-                            'Lo script "test" non è configurato nel package.json del progetto. Vuoi ripararlo?',
-                            fixAction, cancelAction
-                        );
-                        
-                        if (choice === fixAction) {
-                            const result = await this.createPackageJson();
-                            if (!result.success) {
-                                return { success: false, output: result.message };
-                            }
-                            
-                            await new Promise(resolve => setTimeout(resolve, 3000));
-                        } else {
-                            return { success: false, output: 'Operazione annullata dall\'utente.' };
-                        }
-                    }
+                    await this.execPromise('gradle --version', { cwd: rootPath });
                 } catch (err: any) {
-                    return { success: false, output: 'Errore nella lettura del package.json: ' + err.message };
+                    try {
+                        await this.execPromise('./gradlew --version', { cwd: rootPath });
+                    } catch (wrapperErr: any) {
+                        return { 
+                            success: false, 
+                            output: 'Gradle non trovato. Installa Gradle o usa il Gradle Wrapper.' 
+                        };
+                    }
                 }
             }
 
             try {
-                const { stdout, stderr } = await this.execPromise('npm test', { cwd: rootPath });
-                return { success: true, output: stdout || stderr };
+                let command = './gradlew test';
+                try {
+                    const { stdout, stderr } = await this.execPromise(command, { cwd: rootPath });
+                    return { success: true, output: stdout || stderr };
+                } catch (wrapperError) {
+                    command = 'gradle test';
+                    const { stdout, stderr } = await this.execPromise(command, { cwd: rootPath });
+                    return { success: true, output: stdout || stderr };
+                }
             } catch (execError: any) {
                 return { 
                     success: false, 
@@ -183,54 +208,18 @@ export class CodeAnalysisService {
             const files = await this.getAllFiles(rootPath);
             
             const testFiles = files.filter(file => 
-                file.includes('.test.') || 
-                file.includes('.spec.') || 
-                file.includes('/__tests__/') || 
-                file.includes('/test/')
+                file.includes('/test/') && 
+                file.endsWith('.java') &&
+                (file.includes('Test.java') || file.includes('Tests.java'))
             );
             
-            const fileExtensions = files.map(file => path.extname(file).toLowerCase());
-            const extensionCounts = new Map<string, number>();
-            
-            fileExtensions.forEach(ext => {
-                if (ext) {
-                    const count = extensionCounts.get(ext) || 0;
-                    extensionCounts.set(ext, count + 1);
-                }
-            });
-            
-            let dominantExtension = '';
-            let maxCount = 0;
-            const codeExtensions = ['.ts', '.js', '.py', '.java', '.cs', '.go', '.rb', '.php', '.c', '.cpp'];
-
-            extensionCounts.forEach((count, ext) => {
-                if (count > maxCount || (count === maxCount && codeExtensions.includes(ext) && !codeExtensions.includes(dominantExtension))) {
-                    maxCount = count;
-                    dominantExtension = ext;
-                }
-            });
-            
-            const languageMap: Record<string, string> = {
-                '.js': 'javascript',
-                '.ts': 'typescript',
-                '.py': 'python',
-                '.java': 'java',
-                '.cs': 'csharp',
-                '.go': 'go',
-                '.rb': 'ruby',
-                '.php': 'php',
-                '.c': 'c',
-                '.cpp': 'cpp'
-            };
-
-            const language = languageMap[dominantExtension] || 'javascript';
-            
             const sourceFiles = files
-                .filter(file => codeExtensions.includes(path.extname(file).toLowerCase()))
-                .filter(file => !testFiles.includes(file));
+                .filter(file => file.endsWith('.java'))
+                .filter(file => !testFiles.includes(file))
+                .filter(file => file.includes('/main/') || !file.includes('/test/'));
             
             return {
-                language,
+                language: 'java',
                 hasTests: testFiles.length > 0,
                 testFiles,
                 sourceFiles
@@ -238,7 +227,7 @@ export class CodeAnalysisService {
         } catch (error) {
             vscode.window.showErrorMessage(`Errore durante l'analisi del workspace: ${error}`);
             return {
-                language: 'unknown',
+                language: 'java',
                 hasTests: false,
                 testFiles: [],
                 sourceFiles: []
@@ -308,7 +297,7 @@ export class CodeAnalysisService {
         }
     }
 
-    private async createPackageJson(): Promise<{ success: boolean; message: string }> {
+    private async createGradleProject(): Promise<{ success: boolean; message: string }> {
         try {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
@@ -316,76 +305,72 @@ export class CodeAnalysisService {
             }
 
             const rootPath = workspaceFolders[0].uri.fsPath;
-            const packageJsonPath = path.join(rootPath, 'package.json');
+            const buildGradlePath = path.join(rootPath, 'build.gradle');
+            const settingsGradlePath = path.join(rootPath, 'settings.gradle');
             
-            let packageJson: any = {};
-            let exists = false;
-            
-            try {
-                if (fs.existsSync(packageJsonPath)) {
-                    packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                    exists = true;
-                }
-            } catch (err: any) {
-                return { success: false, message: `Errore nella lettura del package.json: ${err.message}` };
-            }
-            
-            let modified = false;
-            
-            if (!exists) {
-                packageJson = {
-                    "name": path.basename(rootPath),
-                    "version": "1.0.0",
-                    "description": "Progetto TDD con TDD-Mentor-AI",
-                    "main": "index.js",
-                    "scripts": {
-                        "test": "jest"
-                    },
-                    "keywords": ["tdd", "testing"],
-                    "author": "",
-                    "license": "ISC",
-                    "devDependencies": {
-                        "jest": "^29.0.0"
-                    }
-                };
-                modified = true;
-            } 
-            else if (!packageJson.scripts || !packageJson.scripts.test) {
-                if (!packageJson.scripts) {
-                    packageJson.scripts = {};
-                }
-                packageJson.scripts.test = "jest";
-                
-                if (!packageJson.devDependencies) {
-                    packageJson.devDependencies = {};
-                }
-                if (!packageJson.devDependencies.jest) {
-                    packageJson.devDependencies.jest = "^29.0.0";
-                }
-                
-                modified = true;
-            }
-            
-            if (modified) {
-                this.fsWriteFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+            const buildGradleContent = `plugins {
+    id 'java'
+    id 'application'
+}
 
-                const terminalCommand = 'npm install';
-                const terminal = vscode.window.createTerminal('TDD-Mentor-AI Setup');
+group = 'com.example'
+version = '1.0.0'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+application {
+    mainClass = 'com.example.Main'
+}
+`;
+
+            const projectName = path.basename(rootPath);
+            const settingsGradleContent = `rootProject.name = '${projectName}'
+`;
+
+            this.fsWriteFileSync(buildGradlePath, buildGradleContent);
+            this.fsWriteFileSync(settingsGradlePath, settingsGradleContent);
+
+            const srcMainJava = path.join(rootPath, 'src', 'main', 'java', 'com', 'example');
+            const srcTestJava = path.join(rootPath, 'src', 'test', 'java', 'com', 'example');
+
+            await fs.promises.mkdir(srcMainJava, { recursive: true });
+            await fs.promises.mkdir(srcTestJava, { recursive: true });
+
+            const mainJavaContent = `package com.example;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, TDD World!");
+    }
+}
+`;
+            const mainJavaPath = path.join(srcMainJava, 'Main.java');
+            this.fsWriteFileSync(mainJavaPath, mainJavaContent);
+
+            try {
+                const terminal = vscode.window.createTerminal('TDD-Mentor-AI Gradle Setup');
                 terminal.sendText(`cd "${rootPath}"`);
-                terminal.sendText(terminalCommand);
+                terminal.sendText('gradle wrapper --gradle-version 7.6');
                 terminal.show();
-                
-                return { 
-                    success: true, 
-                    message: exists ? 
-                        'Il package.json è stato aggiornato con lo script test.' : 
-                        'Il package.json è stato creato con la configurazione per i test.' 
-                };
+            } catch (error) {
+                console.log('Gradle wrapper initialization failed, but project structure created');
             }
-            
-            return { success: true, message: 'Il package.json è già configurato correttamente.' };
+
+            return { success: true, message: 'Progetto Gradle creato con successo!' };
         } catch (err: any) {
-            return { success: false, message: `Errore durante la configurazione: ${err.message}` };
+            return { success: false, message: `Errore durante la creazione del progetto Gradle: ${err.message}` };
         }
     }
 }
