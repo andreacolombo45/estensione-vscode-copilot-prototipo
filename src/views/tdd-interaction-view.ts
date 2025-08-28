@@ -120,6 +120,8 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         
                         const refactoringSuggestions = await this._aiService.generateRefactoringSuggestions();
                         this._stateManager.setRefactoringSuggestions(refactoringSuggestions);
+                    } else {
+                        vscode.window.showErrorMessage('Errore durante l\'esecuzione dei test: ' + testResults.output);
                     }
                     break;
                     
