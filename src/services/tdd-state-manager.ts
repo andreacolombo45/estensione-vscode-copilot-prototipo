@@ -184,11 +184,13 @@ export class TddStateManager {
             testProposals: [],
             userStories: [],
             refactoringSuggestions: [],
+            refactoringFeedback: undefined,
             selectedUserStory: undefined,
             selectedTest: undefined,
             modifiedSelectedTest: undefined,
             testResults: undefined,
-            isEditingTest: false
+            isEditingTest: false,
+            nextPhase: undefined
         };
         this._notifyStateChanged();
         this.saveState();
@@ -205,7 +207,9 @@ export class TddStateManager {
             isEditingTest: false,
             userStories: this._state.userStories, 
             refactoringSuggestions: [],
-            selectedUserStory: this._state.selectedUserStory
+            refactoringFeedback: undefined,
+            selectedUserStory: this._state.selectedUserStory,
+            nextPhase: undefined
         };
         this._notifyStateChanged();
         this.saveState();
