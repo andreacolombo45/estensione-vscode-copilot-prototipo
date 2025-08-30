@@ -33,7 +33,7 @@ export const userStoriesConfig: AiGenerationConfig<UserStory> = {
                 ]
             }`,
     modelOptions: {
-        model: 'google/gemma-3-27b-it:free',
+        model: 'deepseek/deepseek-chat-v3-0324:free',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -114,8 +114,8 @@ export const testProposalsConfig: AiGenerationConfig<TestProposal> = {
         }
         `,
     modelOptions: {
-        model: 'google/gemma-3-27b-it:free',
-        maxTokens: 2000,
+        model: 'deepseek/deepseek-chat-v3-0324:free',
+        maxTokens: 3000,
         temperature: 0.7
     }
 };
@@ -169,7 +169,7 @@ export const refactoringSuggestionsConfig: AiGenerationConfig<RefactoringSuggest
             - Non suggerire modifiche architetturali o strutturali complesse.
             `,
     modelOptions: {
-        model: 'google/gemma-3-27b-it:free',
+        model: 'deepseek/deepseek-chat-v3-0324:free',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -200,7 +200,7 @@ export const refactoringFeedbackConfig: AiGenerationConfig<RefactoringFeedback> 
     userPrompt: 'Analizza il codice modificato e fornisci un feedback dettagliato sui cambiamenti effettuati. Valuta la qualità delle modifiche considerando: principi SOLID, design patterns Java, gestione delle eccezioni, uso appropriato delle Collections, performance, e leggibilità del codice. Indica se sono stati apportati cambiamenti significativi e fornisci suggerimenti per ulteriori miglioramenti specifici.',
     selectionPrompt: '',
     modelOptions: {
-        model: 'google/gemma-3-27b-it:free',
+        model: 'deepseek/deepseek-chat-v3-0324:free',
         maxTokens: 2000,
         temperature: 0.7
     }
