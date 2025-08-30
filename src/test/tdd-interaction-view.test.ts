@@ -164,6 +164,7 @@ suite('TddInteractionView Test Suite', () => {
     });
 
     test("Should handle completeCycle message", async () => {
+        const runTestsStub = codeAnalysisService.runTests as sinon.SinonStub;
         const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
         const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
@@ -188,7 +189,7 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'completeCycle' });
 
-        
+        assert.ok(runTestsStub.calledOnce, 'runTests should be called');
         assert.ok(showInputBoxStub.calledOnce, 'showInputBox should be called for commit message');
         assert.ok(commitChangesStub.calledOnce, 'commitChanges should be called');
         assert.ok(getModifiedFilesStub.called, 'getModifiedFiles should be called');
@@ -256,6 +257,7 @@ suite('TddInteractionView Test Suite', () => {
     });
 
     test('Should handle commitAndStay message', async () => {
+        const runTestsStub = codeAnalysisService.runTests as sinon.SinonStub;
         const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
         const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
@@ -280,6 +282,7 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'commitAndStay' });
         
+        assert.ok(runTestsStub.calledOnce, 'runTests should be called');
         assert.ok(showInputBoxStub.calledOnce, 'showInputBox should be called for commit message');
         assert.ok(commitChangesStub.calledOnce, 'commitChanges should be called');
         assert.ok(getModifiedFilesStub.called, 'getModifiedFiles should be called');
@@ -318,6 +321,7 @@ suite('TddInteractionView Test Suite', () => {
     });
 
     test('Should handle commitAndGoToTest message', async () => {
+        const runTestsStub = codeAnalysisService.runTests as sinon.SinonStub;
         const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
         const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
@@ -342,6 +346,7 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'commitAndGoToTest' });
 
+        assert.ok(runTestsStub.calledOnce, 'runTests should be called');
         assert.ok(showInputBoxStub.calledOnce, 'showInputBox should be called for commit message');
         assert.ok(commitChangesStub.calledOnce, 'commitChanges should be called');
         assert.ok(getModifiedFilesStub.called, 'getModifiedFiles should be called');
