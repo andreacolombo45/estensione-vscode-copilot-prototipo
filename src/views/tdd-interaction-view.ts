@@ -845,6 +845,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
             const hasChanges = modifiedFiles && modifiedFiles.trim() !== '';
             if (hasChanges) {
+                await this.commitRefactoring();
                 this._stateManager.setNextPhase(nextPhase);
                 const feedback = await this._aiService.generateRefactoringFeedback();
                 if (feedback) {
@@ -861,7 +862,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     private async proceedWithTransition(): Promise<void> {
         const nextPhase = this._stateManager.state.nextPhase;
         if (nextPhase) {
-            await this.commitRefactoring();
             await this.proceedToPhase(nextPhase);
             this._stateManager.setRefactoringFeedback(undefined);
             this._stateManager.setNextPhase(undefined);

@@ -159,14 +159,12 @@ suite('AiService Test Suite', () => {
         const getCommitHistoryStub = sinon.stub().resolves({ commits: [] });
         const getImplementedCodeStub = sinon.stub().resolves({ code: '' });
         const getProjectContextStub = sinon.stub().resolves({ context: '' });
-        const getModifiedFilesStub = sinon.stub().resolves(['src/utils/helper.js', 'src/models/user.js']);
 
         codeAnalysisServiceStub = {
             getProjectStructure: getProjectStructureStub,
             getCommitHistory: getCommitHistoryStub,
             getImplementedCode: getImplementedCodeStub,
-            getProjectContext: getProjectContextStub,
-            getModifiedFiles: getModifiedFilesStub
+            getProjectContext: getProjectContextStub
         } as any;
 
         sinon.stub(CodeAnalysisService, 'getInstance').returns(codeAnalysisServiceStub);
@@ -320,18 +318,5 @@ suite('AiService Test Suite', () => {
         });
 
         assert.deepStrictEqual(feedback, mockRefactoringFeedback);
-    });
-
-    test("Should return no changes feedback when no files are modified", async () => {
-        (codeAnalysisServiceStub.getModifiedFiles as sinon.SinonStub).resolves([]);
-        const feedback = await aiService.generateRefactoringFeedback();
-
-        assert.ok(feedback);
-
-        assert.strictEqual(feedback?.hasChanges, false);
-        assert.strictEqual(feedback?.feedback, 'Nessuna modifica al codice è stata rilevata.');
-        assert.strictEqual(feedback?.suggestions.length, 0);
-
-        assert.deepStrictEqual(feedback, mockRefactoringFeedbackNoChanges);
     });
 });

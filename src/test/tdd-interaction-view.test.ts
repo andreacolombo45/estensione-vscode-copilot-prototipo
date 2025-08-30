@@ -164,6 +164,8 @@ suite('TddInteractionView Test Suite', () => {
     });
 
     test("Should handle completeCycle message", async () => {
+        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
+        const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
         const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback')
             .resolves({
@@ -186,7 +188,10 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'completeCycle' });
 
-        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
+        
+        assert.ok(showInputBoxStub.calledOnce, 'showInputBox should be called for commit message');
+        assert.ok(commitChangesStub.calledOnce, 'commitChanges should be called');
+        assert.ok(getModifiedFilesStub.called, 'getModifiedFiles should be called');
         assert.ok(generateRefactoringFeedbackStub.calledOnce, 'generateRefactoringFeedback should be called when there are changes');
         assert.ok(setNextPhaseSpy.calledWith('pick'), 'setNextPhase should be called with pick');
         assert.ok(setRefactoringFeedbackSpy.calledOnce, 'setRefactoringFeedback should be called');
@@ -251,6 +256,8 @@ suite('TddInteractionView Test Suite', () => {
     });
 
     test('Should handle commitAndStay message', async () => {
+        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
+        const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
         const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback')
             .resolves({
@@ -272,8 +279,10 @@ suite('TddInteractionView Test Suite', () => {
 
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'commitAndStay' });
-
-        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
+        
+        assert.ok(showInputBoxStub.calledOnce, 'showInputBox should be called for commit message');
+        assert.ok(commitChangesStub.calledOnce, 'commitChanges should be called');
+        assert.ok(getModifiedFilesStub.called, 'getModifiedFiles should be called');
         assert.ok(generateRefactoringFeedbackStub.calledOnce, 'generateRefactoringFeedback should be called when there are changes');
         assert.ok(setNextPhaseSpy.calledWith('refactoring'), 'setNextPhase should be called with refactoring');
         assert.ok(setRefactoringFeedbackSpy.calledOnce, 'setRefactoringFeedback should be called');
@@ -309,6 +318,8 @@ suite('TddInteractionView Test Suite', () => {
     });
 
     test('Should handle commitAndGoToTest message', async () => {
+        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
+        const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
         const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback')
             .resolves({
@@ -331,7 +342,9 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'commitAndGoToTest' });
 
-        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
+        assert.ok(showInputBoxStub.calledOnce, 'showInputBox should be called for commit message');
+        assert.ok(commitChangesStub.calledOnce, 'commitChanges should be called');
+        assert.ok(getModifiedFilesStub.called, 'getModifiedFiles should be called');
         assert.ok(generateRefactoringFeedbackStub.calledOnce, 'generateRefactoringFeedback should be called when there are changes');
         assert.ok(setNextPhaseSpy.calledWith('red'), 'setNextPhase should be called with red');
         assert.ok(setRefactoringFeedbackSpy.calledOnce, 'setRefactoringFeedback should be called');
@@ -385,18 +398,13 @@ suite('TddInteractionView Test Suite', () => {
         stateManager.setNextPhase('pick');
         stateManager.setRefactoringFeedback(mockFeedback);
         
-        const commitChangesStub = codeAnalysisService.commitChanges as sinon.SinonStub;
-        const showInputBoxStub = sinon.stub(vscode.window, 'showInputBox').resolves('Test commit message');
-        const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
+        
         const generateUserStoriesStub = sinon.stub(aiService, 'generateUserStories').resolves([]);
         
         const resetSpy = sinon.spy(stateManager, 'reset');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
         const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
         const setNextPhaseSpy = sinon.spy(stateManager, 'setNextPhase');
-        
-        getModifiedFilesStub.resetHistory();
-        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -406,9 +414,6 @@ suite('TddInteractionView Test Suite', () => {
         const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
         await messageHandler({ command: 'proceedAfterFeedback' });
 
-        assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called for commit');
-        assert.ok(showInputBoxStub.calledOnce, 'showInputBox should be called for commit message');
-        assert.ok(commitChangesStub.calledOnce, 'commitChanges should be called');
         assert.ok(resetSpy.calledOnce, 'reset should be called when going to pick phase');
         assert.ok(setPhaseSpy.calledWith(TddPhase.PICK), 'setPhase should be called with PICK');
         assert.ok(generateUserStoriesStub.calledOnce, 'generateUserStories should be called');
