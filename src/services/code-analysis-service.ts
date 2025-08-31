@@ -206,13 +206,13 @@ ${afterLastBrace}`;
             const rootPath = workspaceFolders[0].uri.fsPath;
             
             const files = await this.getAllFiles(rootPath);
-            
+
             const testFiles = files.filter(file => 
                 file.includes('/test/') && 
                 file.endsWith('.java') &&
                 (file.includes('Test.java') || file.includes('Tests.java'))
             );
-            
+
             const sourceFiles = files
                 .filter(file => file.endsWith('.java'))
                 .filter(file => !testFiles.includes(file))
@@ -249,10 +249,13 @@ ${afterLastBrace}`;
         return this.extractAddedLines(diff).join('\n');
     }
 
-    private extractAddedLines(diff: string): string[] {
+    public extractAddedLines(diff: string): string[] {
         return diff
             .split('\n')
-            .filter(line => line.startsWith('+') && !line.startsWith('+++'))
+            .filter(line =>
+                (line.startsWith('+') && !line.startsWith('+++')) ||
+                (line.startsWith('-') && !line.startsWith('---'))
+            )
             .map(line => line.slice(1));
     }
 
