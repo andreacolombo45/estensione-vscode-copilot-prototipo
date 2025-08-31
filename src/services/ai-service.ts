@@ -156,15 +156,6 @@ export class AiService {
 
     public async generateRefactoringFeedback(): Promise<RefactoringFeedback | null> {
         try {
-            const modifiedFiles = await this.codeAnalysisService.getModifiedFiles();
-            if (modifiedFiles.length === 0) {
-                return {
-                    hasChanges: false,
-                    feedback: 'Nessuna modifica al codice è stata rilevata.',
-                    suggestions: []
-                };
-            }
-
             const implementedCode = await this.codeAnalysisService.getImplementedCode();
             const projectContext = await this.getProjectContext();
         
@@ -178,7 +169,7 @@ export class AiService {
                     model: config.modelOptions?.model,
                     maxTokens: config.modelOptions?.maxTokens,
                     temperature: config.modelOptions?.temperature,
-                    context: { ...projectContext, modifiedFiles, implementedCode }
+                    context: { ...projectContext, implementedCode }
             });
 
             if (response) {
