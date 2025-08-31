@@ -210,6 +210,70 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getImplementedCode', async () => {
+            const implementedCode = await codeAnalysisService?.getImplementedCode();
+            if (implementedCode) {
+                vscode.window.showInformationMessage(`Codice implementato: ${implementedCode}`);
+            } else {
+                vscode.window.showErrorMessage('Errore durante il recupero del codice implementato.');
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getModifiedFiles', async () => {
+            const modifiedFiles = await codeAnalysisService?.getModifiedFiles();
+            if (modifiedFiles) {
+                vscode.window.showInformationMessage(`File modificati: ${modifiedFiles}`);
+            } else {
+                vscode.window.showErrorMessage('Errore durante il recupero dei file modificati.');
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getProjectStructure', async () => {
+            const projectStructure = await codeAnalysisService?.getProjectStructure();
+            if (projectStructure) {
+                vscode.window.showInformationMessage(`Struttura del progetto: ${JSON.stringify(projectStructure, null, 2)}`);
+            } else {
+                vscode.window.showErrorMessage('Errore durante il recupero della struttura del progetto.');
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getRecentCommits', async () => {
+            const recentCommits = await gitService?.getRecentCommits();
+            if (recentCommits) {
+                vscode.window.showInformationMessage(`Ultimi commit: ${JSON.stringify(recentCommits, null, 2)}`);
+            } else {
+                vscode.window.showErrorMessage('Errore durante il recupero degli ultimi commit.');
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getLastCommitDetails', async () => {
+            const commits = await gitService?.getRecentCommits(1);
+            if (!commits || commits.length === 0) {
+                vscode.window.showErrorMessage('Nessun commit trovato.');
+                return;
+            }
+                const lastCommitDetails = await gitService?.showCommitDetails([commits[0].hash]);
+                if (lastCommitDetails) {
+                    vscode.window.showInformationMessage(`Ultimo commit: ${JSON.stringify(lastCommitDetails, null, 2)}`);
+                    const diff = codeAnalysisService?.extractAddedLines(lastCommitDetails).join('\n');
+                    vscode.window.showInformationMessage(`diff: ${diff}`);
+                } else {
+                    vscode.window.showErrorMessage('Errore durante il recupero dei dettagli dell\'ultimo commit.');
+                }
+            }
+        )
+    );
+
 }
 
 export function deactivate() {}
