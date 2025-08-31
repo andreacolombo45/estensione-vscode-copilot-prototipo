@@ -207,16 +207,24 @@ ${afterLastBrace}`;
             
             const files = await this.getAllFiles(rootPath);
 
-            const testFiles = files.filter(file => 
-                file.includes('/test/') && 
-                file.endsWith('.java') &&
-                (file.includes('Test.java') || file.includes('Tests.java'))
-            );
+            function isTestFile(file: string): boolean {
+                const normalized = file.replace(/\\/g, '/');
+                return (
+                    /\/test\//.test(normalized) &&
+                    /\.java$/.test(normalized) &&
+                    /(Test\.java|Tests\.java)$/.test(path.basename(normalized))
+                );
+            }
+
+            const testFiles = files.filter(isTestFile);
 
             const sourceFiles = files
                 .filter(file => file.endsWith('.java'))
                 .filter(file => !testFiles.includes(file))
-                .filter(file => file.includes('/main/') || !file.includes('/test/'));
+                .filter(file => {
+                    const normalized = file.replace(/\\/g, '/');
+                    return /\/main\//.test(normalized) || !/\/test\//.test(normalized);
+                });
             
             return {
                 language: 'java',
