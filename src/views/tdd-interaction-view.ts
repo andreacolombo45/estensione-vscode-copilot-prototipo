@@ -842,16 +842,22 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
 
     private async handleRefactoringTransition(nextPhase: 'pick' | 'red' | 'refactoring'): Promise<void> {
         try {
-            const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
-            const hasChanges = modifiedFiles && modifiedFiles.trim() !== '';
-            if (hasChanges) {
-                this._stateManager.setNextPhase(nextPhase);
-                const feedback = await this._aiService.generateRefactoringFeedback();
-                if (feedback) {
-                    this._stateManager.setRefactoringFeedback(feedback);
+            const testResults = await this._codeAnalysisService.runTests();
+            if (testResults.success) {
+                const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+                const hasChanges = modifiedFiles && modifiedFiles.trim() !== '';
+                if (hasChanges) {
+                    await this.commitRefactoring();
+                    this._stateManager.setNextPhase(nextPhase);
+                    const feedback = await this._aiService.generateRefactoringFeedback();
+                    if (feedback) {
+                        this._stateManager.setRefactoringFeedback(feedback);
+                    }
+                } else {
+                    await this.proceedToPhase(nextPhase);
                 }
             } else {
-                await this.proceedToPhase(nextPhase);
+                vscode.window.showErrorMessage('Errore durante l\'esecuzione dei test: ' + testResults.output);
             }
         } catch (error) {
             vscode.window.showErrorMessage(`Error during refactoring transition: ${error}`);
@@ -861,7 +867,6 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     private async proceedWithTransition(): Promise<void> {
         const nextPhase = this._stateManager.state.nextPhase;
         if (nextPhase) {
-            await this.commitRefactoring();
             await this.proceedToPhase(nextPhase);
             this._stateManager.setRefactoringFeedback(undefined);
             this._stateManager.setNextPhase(undefined);

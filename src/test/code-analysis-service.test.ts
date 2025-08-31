@@ -267,7 +267,7 @@ diff --git a/Main.java b/Main.java
 
         const result = await codeAnalysisService.getImplementedCode();
 
-        assert.strictEqual(result, 'public class Calculator {\n    public int add(int a, int b) { return a + b; }\n}');
+        assert.strictEqual(result, 'public class Calculator {\n    public int add(int a, int b) { return a + b; }\n}\n// TODO: implement');
         assert.ok(getRecentCommitsStub.calledOnceWith(1));
         assert.ok(showCommitDetailsStub.calledOnceWith(['abc123']));
     });

@@ -56,6 +56,31 @@
         "command": "tdd-mentor-ai.runTests",
         "title": "TDD Mentor: Esegui Test",
         "icon": "$(run)"
+      },
+      {
+        "command": "tdd-mentor-ai.getImplementedCode",
+        "title": "TDD Mentor: Ottieni Codice Implementato",
+        "icon": "$(code)"
+      },
+      {
+        "command": "tdd-mentor-ai.getModifiedFiles",
+        "title": "TDD Mentor: Ottieni File Modificati",
+        "icon": "$(file-changed)"
+      },
+      {
+        "command": "tdd-mentor-ai.getProjectStructure",
+        "title": "TDD Mentor: Ottieni Struttura Progetto",
+        "icon": "$(folder-open)"
+      },
+      {
+        "command": "tdd-mentor-ai.getRecentCommits",
+        "title": "TDD Mentor: Ottieni Ultimi Commit",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "tdd-mentor-ai.getLastCommitDetails",
+        "title": "TDD Mentor: Ottieni Dettagli Commit",
+        "icon": "$(git-commit)"
       }
     ],
     "viewsContainers": {
@@ -72,12 +97,14 @@
         {
           "id": "tdd-mentor-ai-cycle",
           "name": "Ciclo TDD",
-          "type": "webview"
+          "type": "webview",
+          "icon": "$(loop)"
         },
         {
           "id": "tdd-mentor-ai-interaction",
           "name": "Interazione",
-          "type": "webview"
+          "type": "webview",
+          "icon": "$(comment)"
         }
       ]
     },
