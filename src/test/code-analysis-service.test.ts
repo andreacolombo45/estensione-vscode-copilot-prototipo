@@ -354,4 +354,12 @@ diff --git a/Main.java b/Main.java
         assert.ok(getModifiedFilesStub.calledOnce);
         assert.ok(commitFilesStub.calledOnceWith(['src/main/java/Calculator.java', 'src/test/java/CalculatorTest.java'], 'REFACTORING: Refactor Calculator class'));
     });
+
+    test('Should show commit details', async () => {
+            const showCommitDetailsStub = gitServiceStub.showCommitDetails as sinon.SinonStub;
+            showCommitDetailsStub.resolves([""]);
+
+            const output = await codeAnalysisService.showCommitDetails(['abc123']);
+            assert.ok(showCommitDetailsStub.calledOnceWith(['abc123']));
+        });
 });
