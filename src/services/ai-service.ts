@@ -4,6 +4,7 @@ import { AiClient } from './ai-client';
 import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
 import path from 'path';
+import fs from 'fs';
 
 type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion | RefactoringFeedback;
 
@@ -99,15 +100,39 @@ export class AiService {
             const projectStructure = await this.codeAnalysisService.getProjectStructure();
             const commitHistory = await this.codeAnalysisService.getCommitHistory(3);
 
+            const commitDiffs: { message: string; diff: string }[] = [];
+            for (const commit of commitHistory) {
+                const diff = await this.codeAnalysisService.showCommitDetails([commit.hash]);
+                commitDiffs.push({
+                    message: commit.message,
+                    diff: diff
+                });
+            }
+
+            function safeRead(file: string): string {
+                try {
+                    return fs.readFileSync(file, 'utf8');
+                } catch {
+                    return '';
+                }
+            }
+
+            const sourceFilesContent = projectStructure.sourceFiles.slice(0, 5).map(f => ({
+                file: f,
+                content: safeRead(f)
+            }));
+
+            const testFilesContent = projectStructure.testFiles.slice(0, 5).map(f => ({
+                file: f,
+                content: safeRead(f)
+            }));
+
             return {
                 language: projectStructure.language,
                 hasTests: projectStructure.hasTests,
-                testFiles: projectStructure.testFiles.slice(0, 5).map(f => f.split('/').pop()),
-                sourceFiles: projectStructure.sourceFiles.slice(0, 5).map(f => f.split('/').pop()),
-                recentCommits: commitHistory.map(commit => ({
-                    date: commit.date,
-                    message: commit.message
-                }))
+                testFiles: testFilesContent,
+                sourceFiles: sourceFilesContent,
+                recentCommits: commitDiffs
             };
         } catch (error) {
             vscode.window.showErrorMessage(`Error during workspace analysis: ${error}`);

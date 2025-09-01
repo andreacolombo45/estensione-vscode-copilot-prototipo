@@ -384,4 +384,8 @@ public class Main {
             return { success: false, message: `Errore durante la creazione del progetto Gradle: ${err.message}` };
         }
     }
+
+    public async showCommitDetails(args: string[]): Promise<string> {
+        return this.gitService.showCommitDetails(args);
+    }
 }
