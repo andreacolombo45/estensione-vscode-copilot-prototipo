@@ -100,12 +100,26 @@
 
 ## Integrazione AI
 
-- **Problematicità**: l'estensione che sto sviluppando ha l'obiettivo di essere completamente gratuita. Per questa ragione deve prescindere da qualsiasi tipo di modello AI a pagamento.
+- **Problematicità**: l'estensione deve rimanere completamente gratuita. Per questa ragione deve prescindere da qualsiasi tipo di modello AI a pagamento.
 
-- **Soluzione**: ho deciso di utilizzare delle API fornite da OpenRouter e il modello gratuito [deepseek/deepseek-chat-v3-0324:free](https://openrouter.ai/deepseek/deepseek-chat-v3-0324:free).
+- **Scelta del modello**: ho deciso di utilizzare le API di OpenRouter con il modello gratuito [deepseek/deepseek-chat-v3-0324:free](https://openrouter.ai/deepseek/deepseek-chat-v3-0324:free).
 
-- **Struttura output**: questo modello, a differenza di altri meno performanti, non dispone di un meccanismo per forzare la struttura dell'output. Ho dovuto, quindi, ricorrere all'uso di un prompt contenenti un esempio di output da fornire, con la consapevolezza che questo potrebbe non essere utilizzato sempre dall'AI.
+- **Struttura dell'output**: a differenza di modelli più avanzati, quello scelto non dispone di un meccanismo per forzare la struttura dell'output. Ho dovuto, quindi, ricorrere all'uso di un prompt che include un esempio di output desiderato, pur consapevole che l'AI potrebbe non rispettarlo sempre.
 
-- **System Prompt**: costituisce le informazioni base a cui deve aderire strettamente l'AI nella risposta.
+- **System Prompt**: contiene le informazioni base a cui l'AI deve attenersi. Oltre alle linee guida generali, include istruzioni specifiche per la generazione dei test, come l'uso del framework *Mockito* per simulare gli elementi non testati direttamente, corredate da esempi di test.
 
-- **User Prompt**: sono le indicazioni più generiche e variabili di ogni richiesta.
+- **User Prompt**: rappresenta la parte più variabile della richiesta.
+
+- **Contenuto del Prompt**: in base alla richiesta, vengono passati all'AI il contesto del progetto (contenuto dei file e dei commit precedenti), la struttura del progetto, le modifiche recenti e non ancora committate, oltre alle specifiche del problema.
+
+## Testing dell'estensione
+
+- **Limitazioni**: il processo di testing dell'estensione è stato fortemente ostacolato da errori ricorrenti nelle chiamate API (429 *Too Many Requests*), 
+
+- **Cause**: la causa principale sembra essere l'uso di modelli gratuiti, che garantiscono disponibilità ridotta e prestazioni instabili.
+
+- **Modelli testati**: sono stati provati diversi modelli gratuiti, tra cui [deepseek/deepseek-chat-v3-0324:free](https://openrouter.ai/deepseek/deepseek-chat-v3-0324:free), [google/gemma-3-27b-it:free](https://openrouter.ai/google/gemma-3-27b-it:free), [deepseek/deepseek-r1-0528:free](https://openrouter.ai/deepseek/deepseek-r1-0528:free)
+
+- **Aspetti positivi**: nonostante i limiti, le risposte fornite dall'AI si sono spesso rilevate pertinenti e stimolanti. L’AI non solo ha proposto soluzioni prevedibili, ma anche alternative corrette e meno scontate, offrendo spunti utili di riflessione.
+
+- **Conclusioni**: per mantenere l'estensione completamente gratuita non verranno utilizzati modelli a pagamento. Lo scopo del progetto non è produrre uno strumento finito e privo di errori, ma esplorare il potenziale di un mentor AI per supportare lo studente nell'apprendimento del TDD. 
