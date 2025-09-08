@@ -329,4 +329,11 @@ suite('TddStateManager Test Suite', () => {
         assert.strictEqual(state.greenChatHistory[0].user, 'User message');
         assert.strictEqual(state.greenChatHistory[0].ai, 'AI response');
     });
+
+    test('Should clear chat history', () => {
+        stateManager.clearChatHistory();
+
+        const state = stateManager.state;
+        assert.strictEqual(state.greenChatHistory.length, 0);
+    });
 });

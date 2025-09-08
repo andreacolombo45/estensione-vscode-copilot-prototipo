@@ -186,8 +186,15 @@ export class TddStateManager {
         this._notifyStateChanged();
         this.saveState();
     }
+
     public addToChatHistory(userMessage: string, aiMessage: string): void {
         this._state.greenChatHistory.push({ user: userMessage, ai: aiMessage });
+        this._notifyStateChanged();
+        this.saveState();
+    }
+
+    public clearChatHistory(): void {
+        this._state.greenChatHistory = [];
         this._notifyStateChanged();
         this.saveState();
     }
