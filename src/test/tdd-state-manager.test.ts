@@ -313,4 +313,11 @@ suite('TddStateManager Test Suite', () => {
         const state = stateManager.state;
         assert.strictEqual(state.nextPhase, 'red');
     });
+
+    test('Should increase question count', () => {
+        stateManager.increaseQuestionCount();
+
+        const state = stateManager.state;
+        assert.strictEqual(state.greenQuestionCount, 1);
+    });
 });
