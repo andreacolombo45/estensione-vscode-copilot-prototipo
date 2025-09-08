@@ -7,6 +7,7 @@ import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase } from '../models/tdd-models';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
+import { stat } from 'fs';
 
 suite('TddInteractionView Test Suite', () => {
     let tddInteractionView: TddInteractionView;
@@ -555,5 +556,24 @@ suite('TddInteractionView Test Suite', () => {
         await messageHandler({ command: 'clearChatHistory' });
 
         assert.ok(clearChatHistorySpy.calledOnce);
+    });
+
+    test('Should handle askAiGreenPhase message', async () => {
+        stateManager.setPhase(TddPhase.GREEN);
+        const increaseQuestionCountStub = sinon.stub(stateManager, 'increaseQuestionCount').resolves(2);
+        const askGreenQuestionStub = sinon.stub(aiService, 'askGreenQuestion').resolves('AI response to green question');
+        const addToChatHistorySpy = sinon.spy(stateManager, 'addToChatHistory');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'askAiGreenPhase', question: 'Domanda di test' });
+
+        assert.ok(increaseQuestionCountStub.calledOnce);
+        assert.ok(askGreenQuestionStub.calledOnce);
+        assert.ok(addToChatHistorySpy.calledOnce);
     });
 });

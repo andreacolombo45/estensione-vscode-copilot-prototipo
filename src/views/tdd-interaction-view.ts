@@ -157,6 +157,19 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     const suggestions = await this._aiService.generateRefactoringSuggestions();
                     this._stateManager.setRefactoringSuggestions(suggestions);
                     break;
+                
+                case 'askAiGreenPhase':
+                    if (this._stateManager.state.currentPhase === TddPhase.GREEN && data.question) {
+                        this._stateManager.increaseQuestionCount();
+                        const level = Math.min(this._stateManager.state.greenQuestionCount, 3);
+                        const aiResponse = await this._aiService.askGreenQuestion(data.question, this._stateManager.state.greenChatHistory, level);
+                        if (aiResponse) {
+                            this._stateManager.addToChatHistory(data.question, aiResponse);
+                        }
+                        this._updateView();
+                    }
+                break;
+
                 case 'clearChatHistory':
                     this._stateManager.clearChatHistory();
                 break;
