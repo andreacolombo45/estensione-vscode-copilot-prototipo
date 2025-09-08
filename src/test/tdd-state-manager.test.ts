@@ -320,4 +320,13 @@ suite('TddStateManager Test Suite', () => {
         const state = stateManager.state;
         assert.strictEqual(state.greenQuestionCount, 1);
     });
+
+    test('Should add to chat history', () => {
+        stateManager.addToChatHistory('User message', 'AI response');
+
+        const state = stateManager.state;
+        assert.strictEqual(state.greenChatHistory.length, 1);
+        assert.strictEqual(state.greenChatHistory[0].user, 'User message');
+        assert.strictEqual(state.greenChatHistory[0].ai, 'AI response');
+    });
 });
