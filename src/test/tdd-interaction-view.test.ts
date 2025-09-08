@@ -543,4 +543,17 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(generateUserStoriesStub.calledOnce);
         assert.ok(setUserStoriesSpy.calledWith([]));
     });
+
+    test('Should handle clearChatHistory message', async () => {
+        const clearChatHistorySpy = sinon.spy(stateManager, 'clearChatHistory');
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'clearChatHistory' });
+
+        assert.ok(clearChatHistorySpy.calledOnce);
+    });
 });
