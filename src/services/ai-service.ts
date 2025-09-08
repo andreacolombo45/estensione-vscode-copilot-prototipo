@@ -207,4 +207,44 @@ export class AiService {
             return null;
         }
     }
+
+    public async askGreenQuestion(question: string, chatHistory: { user: string, ai: string }[], greenQuestionCount: number): Promise<string | null> {
+        try {
+            const projectContext = await this.getProjectContext();
+            const userPrompt = this._buildGreenPhasePrompt(question, greenQuestionCount);
+
+            const response = await this.aiClient.sendRequest<string>(
+                userPrompt,
+                {
+                    systemPrompt: this.configs.greenQuestion.systemPrompt,
+                    model: this.configs.greenQuestion.modelOptions?.model,
+                    maxTokens: this.configs.greenQuestion.modelOptions?.maxTokens,
+                    temperature: this.configs.greenQuestion.modelOptions?.temperature,
+                    context: { ...projectContext, chatHistory }
+                }
+            );
+
+            if (response) {
+                return response;
+            } else {
+                throw new Error('Response format is invalid.');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error during the generation of refactoring feedback: ${error}`);
+            return null;
+        }
+    }
+
+    private _buildGreenPhasePrompt(question: string, level: number): string {
+        switch (level) {
+            case 1:
+                return `L'utente ti chiede: "${question}". Rispondi solo con domande generiche che stimolino la riflessione, senza dare suggerimenti specifici.`;
+            case 2:
+                return `L'utente ti chiede: "${question}". Puoi dare suggerimenti più mirati, ma non soluzioni, e stimola il ragionamento.`;
+            case 3:
+                return `L'utente ti chiede: "${question}". Dai suggerimenti molto mirati, ma non fornire mai la soluzione completa.`;
+            default:
+                return `L'utente ti chiede: "${question}". Rispondi solo con domande generiche che stimolino la riflessione, senza dare suggerimenti specifici.`;
+        }
+    }
 }
