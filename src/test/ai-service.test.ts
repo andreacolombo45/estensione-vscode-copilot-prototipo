@@ -155,6 +155,17 @@ suite('AiService Test Suite', () => {
             sinon.match.has('systemPrompt', sinon.match(/refactoring.*feedback/i))
         ).resolves(mockRefactoringFeedback);
 
+        sendRequestStub.withArgs(
+            sinon.match.any,
+            sinon.match(obj =>
+                obj.context &&
+                Array.isArray(obj.context.chatHistory) &&
+                obj.context.chatHistory.length === 2 &&
+                obj.context.chatHistory[0].user === 'Domanda 1' &&
+                obj.context.chatHistory[1].ai === 'Risposta 2'
+            )
+        ).resolves('Le modifiche apportate mostrano un buon miglioramento della qualità del codice. È stata ridotta la duplicazione e migliorata la leggibilità.');
+
         const getProjectStructureStub = sinon.stub().resolves({ files: [], folders: [] });
         const getCommitHistoryStub = sinon.stub().resolves({ commits: [] });
         const getImplementedCodeStub = sinon.stub().resolves({ code: '' });
@@ -318,5 +329,24 @@ suite('AiService Test Suite', () => {
         });
 
         assert.deepStrictEqual(feedback, mockRefactoringFeedback);
+    });
+
+    test('Should askGreenQuestion correctly', async () => {
+        const question = 'Domanda 3';
+        const chatHistory = [
+            { user: 'Domanda 1', ai: 'Risposta 1' },
+            { user: 'Domanda 2', ai: 'Risposta 2' }
+        ];
+        const greenQuestionCount = 2;
+        const selectedTest = mockTestProposals[0];
+
+        const getProjectStructureStub = sinon.stub().resolves({ files: [], folders: [] });
+
+        const response = await aiService.askGreenQuestion(question, chatHistory, greenQuestionCount, selectedTest);
+
+        assert.ok(response);
+        assert.strictEqual(typeof response, 'string');
+        assert.ok(response.length > 0);
+        assert.strictEqual(response, 'Le modifiche apportate mostrano un buon miglioramento della qualità del codice. È stata ridotta la duplicazione e migliorata la leggibilità.');
     });
 });

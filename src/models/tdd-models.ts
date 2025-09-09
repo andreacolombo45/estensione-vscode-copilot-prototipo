@@ -52,6 +52,8 @@ export interface TddState {
     };
     isEditingTest?: boolean;
     nextPhase?: 'pick' | 'red' | 'refactoring';
+    greenQuestionCount: number;
+    greenChatHistory: { user: string, ai: string }[];
 }
 
 export interface AiRequestOptions {

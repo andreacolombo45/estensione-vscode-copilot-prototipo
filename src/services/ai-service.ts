@@ -5,8 +5,10 @@ import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
 import path from 'path';
 import fs from 'fs';
+import { error } from 'console';
 
 type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion | RefactoringFeedback;
+type AiResponse = { content?: string } | string;
 
 export class AiService {
     private static instance: AiService;
@@ -206,5 +208,69 @@ export class AiService {
             vscode.window.showErrorMessage(`Error during the generation of refactoring feedback: ${error}`);
             return null;
         }
+    }
+
+    public async askGreenQuestion(
+        question: string, 
+        chatHistory: { user: string, ai: string }[], 
+        greenQuestionCount: number,
+        selectedTest: TestProposal | undefined
+    ): Promise<string | null> {
+        try {
+            const projectContext = await this.getProjectContext();
+            const userPrompt = this._buildGreenPhasePrompt(question, greenQuestionCount);
+
+            const response = await this.aiClient.sendRequest<string>(
+                userPrompt,
+                {
+                    systemPrompt: this.configs.greenQuestion.systemPrompt,
+                    model: this.configs.greenQuestion.modelOptions?.model,
+                    maxTokens: this.configs.greenQuestion.modelOptions?.maxTokens,
+                    temperature: this.configs.greenQuestion.modelOptions?.temperature,
+                    context: { ...projectContext, chatHistory, selectedTest }
+                }
+            );
+
+            if (response) {
+                return this.parseAiResponse(response);
+            } else {
+                throw new Error('Response format is invalid.');
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error during the generation of refactoring feedback: ${error}`);
+            return null;
+        }
+    }
+
+    private _buildGreenPhasePrompt(question: string, level: number): string {
+        switch (level) {
+            case 1:
+                return `L'utente ti chiede: "${question}". Rispondi solo con domande generiche che stimolino la riflessione, senza dare suggerimenti specifici.`;
+            case 2:
+                return `L'utente ti chiede: "${question}". Puoi dare suggerimenti più mirati, ma non soluzioni, e stimola il ragionamento.`;
+            case 3:
+                return `L'utente ti chiede: "${question}". Dai suggerimenti molto mirati, ma non fornire mai la soluzione completa.`;
+            default:
+                return `L'utente ti chiede: "${question}". Rispondi solo con domande generiche che stimolino la riflessione, senza dare suggerimenti specifici.`;
+        }
+    }
+
+    private parseAiResponse(response: any): string {
+        if (typeof response === 'string') {
+            return response;
+        }
+        if (
+            response.choices &&
+            Array.isArray(response.choices) &&
+            response.choices[0] &&
+            response.choices[0].message &&
+            typeof response.choices[0].message.content === 'string'
+        ) {
+            return response.choices[0].message.content;
+        }
+        if (response.content && typeof response.content === 'string') {
+            return response.content;
+        }
+        return '';
     }
 }

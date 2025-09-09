@@ -157,6 +157,28 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     const suggestions = await this._aiService.generateRefactoringSuggestions();
                     this._stateManager.setRefactoringSuggestions(suggestions);
                     break;
+                
+                case 'askAiGreenPhase':
+                    if (this._stateManager.state.currentPhase === TddPhase.GREEN && data.question) {
+                        this._stateManager.increaseQuestionCount();
+                        const level = Math.min(this._stateManager.state.greenQuestionCount, 3);
+                        const selectedTest = data.selectedTest as TestProposal | undefined;
+                        const aiResponse = await this._aiService.askGreenQuestion(
+                            data.question, 
+                            this._stateManager.state.greenChatHistory, 
+                            level,
+                            selectedTest
+                        );
+                        if (aiResponse) {
+                            this._stateManager.addToChatHistory(data.question, aiResponse);
+                        }
+                        this._updateView();
+                    }
+                break;
+
+                case 'clearChatHistory':
+                    this._stateManager.clearChatHistory();
+                break;
             }
         });
     }
@@ -172,6 +194,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     }
 
     private async _getHtmlForWebview(state: TddState): Promise<string> {
+        const selectedTest = state.selectedTest;
         let phaseContent = '';
         
         switch (state.currentPhase) {
@@ -442,6 +465,50 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         command: 'proceedAfterFeedback'
                     });
                 }
+                
+                function askAiGreenPhase() {
+                    const input = document.getElementById('messageInput');
+                    const message = input.value.trim();
+
+                    if (!message) return;
+
+                    vscode.postMessage({
+                        command: 'askAiGreenPhase',
+                        question: message,
+                        selectedTest: ${JSON.stringify(selectedTest)}
+                    });
+                    
+                    input.value = '';
+                    scrollToBottom();
+                }
+
+                function clearChatHistory() {
+                    vscode.postMessage({
+                        command: 'clearChatHistory'
+                    });
+                }
+
+                function scrollToBottom() {
+                    setTimeout(() => {
+                        const container = document.getElementById('chatContainer');
+                        container.scrollTop = container.scrollHeight;
+                    }, 100);
+                }
+                
+                document.getElementById('messageInput').addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        askAiGreenPhase();
+                    }
+                });
+                
+                window.addEventListener('message', function(event) {
+                    if (event.data.command === 'newMessage') {
+                        scrollToBottom();
+                    }
+                });
+                
+                scrollToBottom();
             </script>
         </body>
         </html>
@@ -656,7 +723,19 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         if (!selectedTest) {
             return '<div>Nessun test selezionato. Torna alla fase RED.</div>';
         }
+
+        const chatHistory = this._stateManager.state.greenChatHistory;
+
         
+        const chatHtml = chatHistory.map((msg) => {
+            return `
+                <div class="chat-message">
+                    <div class="chat-user"><b>👤 Tu:</b> ${this._escapeHtml(msg.user)}</div>
+                    <div class="chat-ai"><b>🤖 Mentore AI:</b> ${this._escapeHtml(msg.ai)}</div>
+                </div>
+            `;
+        }).join('');
+
         return `
         <div class="phase-header">
             <span class="phase-emoji">🟢</span>
@@ -669,8 +748,139 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <div class="code-block">${this._escapeHtml(selectedTest.code)}</div>
         
         <p>Ora implementa il codice necessario per far passare questo test.</p>
-        
+
+        <div class="chat-container" id="chatContainer">
+            ${chatHistory.length > 0 ? chatHtml : '<div class="empty-state">💬 Chiedi spiegazioni al tuo AI Mentor TDD!</div>'}
+        </div>
+            
+        <div class="input-container">
+            <textarea 
+                id="messageInput" 
+                class="message-input" 
+                placeholder="Scrivi un messaggio..."
+            ></textarea>
+            
+            <div class="input-buttons">
+                <button class="btn btn-secondary" onclick="clearChatHistory()">🗑️ Pulisci Chat</button>
+                <button class="btn btn-primary" onclick="askAiGreenPhase()">📤 Invia</button>
+            </div>
+        </div>
+
         <button class="btn" onclick="verifyTests()">Verifica Test</button>
+
+        <script>
+
+            
+        </script>
+        
+        <style>
+            .chat-container {
+                max-height: 300px;
+                min-height: 120px;
+                overflow-y: auto;
+                padding: 10px 0;
+                border: 2px solid var(--vscode-input-border);
+                border-radius: 12px;
+                background-color: var(--vscode-input-background);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                margin-bottom: 16px;
+            }
+            
+            .message {
+                margin-bottom: 15px;
+                padding: 10px;
+                border-radius: 8px;
+                max-width: 70%;
+                clear: both;
+            }
+            
+            .user-message {
+                background-color: var(--vscode-input-background);
+                margin-left: 20px;
+            }
+            
+            .assistant-message {
+                background-color: var(--vscode-sideBar-background);
+                margin-right: 20px;
+            }
+            
+            .message-header {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.8em;
+                color: var(--vscode-descriptionForeground);
+                margin-bottom: 5px;
+            }
+            
+            .message-role {
+                font-weight: bold;
+            }
+            
+            .message-content {
+                line-height: 1.4;
+                white-space: pre-wrap;
+            }
+
+            .input-container {
+                position: sticky;
+                bottom: 0;
+                background-color: var(--vscode-editor-background);
+                padding: 10px 0;
+                border-top: 1px solid var(--vscode-panel-border);
+            }
+
+            .message-input {
+                width: 100%;
+                min-height: 60px;
+                padding: 8px;
+                border: 1px solid var(--vscode-input-border);
+                border-radius: 4px;
+                background-color: var(--vscode-input-background);
+                color: var(--vscode-input-foreground);
+                font-family: var(--vscode-font-family);
+                resize: vertical;
+                box-sizing: border-box;
+            }
+            
+            .input-buttons {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 8px;
+            }
+            
+            .btn {
+                padding: 6px 12px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.9em;
+            }
+            
+            .btn-primary {
+                background-color: var(--vscode-button-background);
+                color: var(--vscode-button-foreground);
+            }
+            
+            .btn-primary:hover {
+                background-color: var(--vscode-button-hoverBackground);
+            }
+            
+            .btn-secondary {
+                background-color: var(--vscode-button-secondaryBackground);
+                color: var(--vscode-button-secondaryForeground);
+            }
+            
+            .btn-secondary:hover {
+                background-color: var(--vscode-button-secondaryHoverBackground);
+            }
+            
+            .empty-state {
+                text-align: center;
+                color: var(--vscode-descriptionForeground);
+                font-style: italic;
+                margin-top: 50px;
+            }
+        </style>
         `;
     }
 
