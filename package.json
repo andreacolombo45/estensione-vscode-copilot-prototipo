@@ -81,6 +81,16 @@
         "command": "tdd-mentor-ai.getLastCommitDetails",
         "title": "TDD Mentor: Ottieni Dettagli Commit",
         "icon": "$(git-commit)"
+      },
+      {
+        "command": "tdd-mentor-ai.getQuestionCount",
+        "title": "TDD Mentor: Ottieni Contatore Domande AI Verde",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "tdd-mentor-ai.clearChat",
+        "title": "TDD Mentor: Resetta Chat Interazione",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {

@@ -274,6 +274,20 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
 
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getQuestionCount', () => {
+            const count = stateManager.state.greenQuestionCount;
+            vscode.window.showInformationMessage(`Contatore domande AI verde: ${count}`);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.clearChat', () => {
+            stateManager.clearChatHistory();
+            vscode.window.showInformationMessage('Chat resettata.');
+        })
+    );
+
 }
 
 export function deactivate() {}
