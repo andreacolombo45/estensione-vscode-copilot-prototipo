@@ -5,8 +5,10 @@ import { CodeAnalysisService } from './code-analysis-service';
 import { aiConfigs } from '../models/tdd-prompts';
 import path from 'path';
 import fs from 'fs';
+import { error } from 'console';
 
 type AiGeneratedItem = UserStory | TestProposal | RefactoringSuggestion | RefactoringFeedback;
+type AiResponse = { content?: string } | string;
 
 export class AiService {
     private static instance: AiService;
@@ -208,7 +210,12 @@ export class AiService {
         }
     }
 
-    public async askGreenQuestion(question: string, chatHistory: { user: string, ai: string }[], greenQuestionCount: number): Promise<string | null> {
+    public async askGreenQuestion(
+        question: string, 
+        chatHistory: { user: string, ai: string }[], 
+        greenQuestionCount: number,
+        selectedTest: TestProposal | undefined
+    ): Promise<string | null> {
         try {
             const projectContext = await this.getProjectContext();
             const userPrompt = this._buildGreenPhasePrompt(question, greenQuestionCount);
@@ -220,12 +227,12 @@ export class AiService {
                     model: this.configs.greenQuestion.modelOptions?.model,
                     maxTokens: this.configs.greenQuestion.modelOptions?.maxTokens,
                     temperature: this.configs.greenQuestion.modelOptions?.temperature,
-                    context: { ...projectContext, chatHistory }
+                    context: { ...projectContext, chatHistory, selectedTest }
                 }
             );
 
             if (response) {
-                return response;
+                return this.parseAiResponse(response);
             } else {
                 throw new Error('Response format is invalid.');
             }
@@ -246,5 +253,24 @@ export class AiService {
             default:
                 return `L'utente ti chiede: "${question}". Rispondi solo con domande generiche che stimolino la riflessione, senza dare suggerimenti specifici.`;
         }
+    }
+
+    private parseAiResponse(response: any): string {
+        if (typeof response === 'string') {
+            return response;
+        }
+        if (
+            response.choices &&
+            Array.isArray(response.choices) &&
+            response.choices[0] &&
+            response.choices[0].message &&
+            typeof response.choices[0].message.content === 'string'
+        ) {
+            return response.choices[0].message.content;
+        }
+        if (response.content && typeof response.content === 'string') {
+            return response.content;
+        }
+        return '';
     }
 }

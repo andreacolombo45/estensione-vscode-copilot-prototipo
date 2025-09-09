@@ -338,10 +338,11 @@ suite('AiService Test Suite', () => {
             { user: 'Domanda 2', ai: 'Risposta 2' }
         ];
         const greenQuestionCount = 2;
+        const selectedTest = mockTestProposals[0];
 
         const getProjectStructureStub = sinon.stub().resolves({ files: [], folders: [] });
 
-        const response = await aiService.askGreenQuestion(question, chatHistory, greenQuestionCount);
+        const response = await aiService.askGreenQuestion(question, chatHistory, greenQuestionCount, selectedTest);
 
         assert.ok(response);
         assert.strictEqual(typeof response, 'string');

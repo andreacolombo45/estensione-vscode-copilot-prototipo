@@ -162,7 +162,13 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                     if (this._stateManager.state.currentPhase === TddPhase.GREEN && data.question) {
                         this._stateManager.increaseQuestionCount();
                         const level = Math.min(this._stateManager.state.greenQuestionCount, 3);
-                        const aiResponse = await this._aiService.askGreenQuestion(data.question, this._stateManager.state.greenChatHistory, level);
+                        const selectedTest = data.selectedTest as TestProposal | undefined;
+                        const aiResponse = await this._aiService.askGreenQuestion(
+                            data.question, 
+                            this._stateManager.state.greenChatHistory, 
+                            level,
+                            selectedTest
+                        );
                         if (aiResponse) {
                             this._stateManager.addToChatHistory(data.question, aiResponse);
                         }
@@ -188,6 +194,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     }
 
     private async _getHtmlForWebview(state: TddState): Promise<string> {
+        const selectedTest = state.selectedTest;
         let phaseContent = '';
         
         switch (state.currentPhase) {
@@ -458,7 +465,50 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                         command: 'proceedAfterFeedback'
                     });
                 }
-            }
+                
+                function askAiGreenPhase() {
+                    const input = document.getElementById('messageInput');
+                    const message = input.value.trim();
+
+                    if (!message) return;
+
+                    vscode.postMessage({
+                        command: 'askAiGreenPhase',
+                        question: message,
+                        selectedTest: ${JSON.stringify(selectedTest)}
+                    });
+                    
+                    input.value = '';
+                    scrollToBottom();
+                }
+
+                function clearChatHistory() {
+                    vscode.postMessage({
+                        command: 'clearChatHistory'
+                    });
+                }
+
+                function scrollToBottom() {
+                    setTimeout(() => {
+                        const container = document.getElementById('chatContainer');
+                        container.scrollTop = container.scrollHeight;
+                    }, 100);
+                }
+                
+                document.getElementById('messageInput').addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        askAiGreenPhase();
+                    }
+                });
+                
+                window.addEventListener('message', function(event) {
+                    if (event.data.command === 'newMessage') {
+                        scrollToBottom();
+                    }
+                });
+                
+                scrollToBottom();
             </script>
         </body>
         </html>
@@ -700,7 +750,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <p>Ora implementa il codice necessario per far passare questo test.</p>
 
         <div class="chat-container" id="chatContainer">
-            ${chatHistory.length > 0 ? chatHtml : '<div class="empty-state">💬 Inizia una conversazione con il tuo AI Mentor TDD!</div>'}
+            ${chatHistory.length > 0 ? chatHtml : '<div class="empty-state">💬 Chiedi spiegazioni al tuo AI Mentor TDD!</div>'}
         </div>
             
         <div class="input-container">
@@ -719,55 +769,8 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <button class="btn" onclick="verifyTests()">Verifica Test</button>
 
         <script>
-            const vscode = acquireVsCodeApi();
 
-            function askAiGreenPhase() {
-                const input = document.getElementById('messageInput');
-                const message = input.value.trim();
-                
-                if (!message) {
-                const outputChannel = vscode.window.createOutputChannel('TDD Mentor AI Debug');
-                            outputChannel.appendLine('--- API ---');
-                            outputChannel.show();
-                return;
-    }
-                
-                vscode.postMessage({
-                    command: 'askAiGreenPhase',
-                    question: message
-                });
-                
-                input.value = '';
-                scrollToBottom();
-            }
-
-            function clearChatHistory() {
-                vscode.postMessage({
-                    command: 'clearChatHistory'
-                });
-            }
-
-            function scrollToBottom() {
-                setTimeout(() => {
-                    const container = document.getElementById('chatContainer');
-                    container.scrollTop = container.scrollHeight;
-                }, 100);
-            }
             
-            document.getElementById('messageInput').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    askAiGreenPhase();
-                }
-            });
-            
-            window.addEventListener('message', function(event) {
-                if (event.data.command === 'newMessage') {
-                    scrollToBottom();
-                }
-            });
-            
-            scrollToBottom();
         </script>
         
         <style>

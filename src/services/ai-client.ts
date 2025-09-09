@@ -56,7 +56,7 @@ export class AiClient {
                     'X-Title': 'TDD-Mentor-AI'
                 },
                 body: JSON.stringify({
-                    model: options.model ?? 'deepseek/deepseek-chat-v3.1:free',
+                    model: options.model ?? 'deepseek/deepseek-chat-v3-0324',
                     messages: messages,
                     max_tokens: options.maxTokens ?? 1000,
                     temperature: options.temperature ?? 0.7

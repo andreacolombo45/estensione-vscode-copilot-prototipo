@@ -33,7 +33,7 @@ export const userStoriesConfig: AiGenerationConfig<UserStory> = {
                 ]
             }`,
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3.1:free',
+        model: 'deepseek/deepseek-chat-v3-0324',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -114,7 +114,7 @@ export const testProposalsConfig: AiGenerationConfig<TestProposal> = {
         }
         `,
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3.1:free',
+        model: 'deepseek/deepseek-chat-v3-0324',
         maxTokens: 5000,
         temperature: 0.7
     }
@@ -169,7 +169,7 @@ export const refactoringSuggestionsConfig: AiGenerationConfig<RefactoringSuggest
             - Non suggerire modifiche architetturali o strutturali complesse.
             `,
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3.1:free',
+        model: 'deepseek/deepseek-chat-v3-0324',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -200,7 +200,7 @@ export const refactoringFeedbackConfig: AiGenerationConfig<RefactoringFeedback> 
     userPrompt: 'Analizza il codice modificato e fornisci un feedback dettagliato sui cambiamenti effettuati. Valuta la qualità delle modifiche considerando: principi SOLID, design patterns Java, gestione delle eccezioni, uso appropriato delle Collections, performance, e leggibilità del codice. Indica se sono stati apportati cambiamenti significativi e fornisci suggerimenti per ulteriori miglioramenti specifici.',
     selectionPrompt: '',
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3.1:free',
+        model: 'deepseek/deepseek-chat-v3-0324',
         maxTokens: 2000,
         temperature: 0.7
     }
@@ -208,12 +208,12 @@ export const refactoringFeedbackConfig: AiGenerationConfig<RefactoringFeedback> 
 
 export const greenQuestionConfig: AiGenerationConfig<string> = {
     systemPrompt: `Sei un esperto mentore AI specializzato in TDD e sviluppo software. Il tuo compito è rispondere a domande tecniche poste da uno studente che sta implementando codice seguendo la metodologia TDD. 
-        IMPORTANTE: Le tue risposte devono seguire la metodologia TDD e non devono mai fornire soluzioni complete, ma solo suggerimenti e indicazioni per aiutare lo studente a trovare la soluzione da solo.
+        IMPORTANTE: Le tue risposte devono seguire la metodologia TDD e non devono mai fornire soluzioni complete, ma solo suggerimenti e indicazioni per aiutare lo studente a trovare la soluzione da solo. Rispondi con al massimo 30 parole.
     `,
     userPrompt: '',
     selectionPrompt: '',
     modelOptions: {
-        model: 'deepseek/deepseek-chat-v3.1:free',
+        model: 'deepseek/deepseek-chat-v3-0324',
         maxTokens: 2000,
         temperature: 0.7
     }
