@@ -58,7 +58,154 @@ export async function activate(context: vscode.ExtensionContext) {
             );
             
             if (response === initGitAction) {
-                vscode.commands.executeCommand('git.init');
+                vscode.commands.executeCommand('git.init').then(async () => {
+                    const workspaceFolders = vscode.workspace.workspaceFolders;
+                    if (workspaceFolders && workspaceFolders.length > 0) {
+                        const rootPath = workspaceFolders[0].uri.fsPath;
+                        const gitignorePath = `${rootPath}\\.gitignore`;
+                        const fs = require('fs');
+                        const path = require('path');
+                        const defaultGitignore = `###########################
+# Gradle / Java
+###########################
+.gradle/
+build/
+bin/
+out/
+
+# File compilati
+*.class
+*.jar
+*.war
+*.ear
+
+# Log
+*.log
+
+# Risultati test
+*.bin
+*.xml
+*.html
+*.json
+
+###########################
+# VS Code Extension / Node
+###########################
+node_modules/
+dist/
+.vscode-test/
+*.vsix
+
+###########################
+# IDEs / Editor
+###########################
+.vscode/
+.idea/
+*.iml
+
+###########################
+# Sistema operativo
+###########################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+`;
+
+                        if (!fs.existsSync(gitignorePath)) {
+                            fs.writeFileSync(gitignorePath, defaultGitignore, 'utf8');
+                            vscode.window.showInformationMessage('Creato file .gitignore con le regole standard per Gradle/Java/Node.');
+                        }
+
+                        const buildGradlePath = path.join(rootPath, 'build.gradle');
+                        const settingsGradlePath = path.join(rootPath, 'settings.gradle');
+                        const srcMainJava = path.join(rootPath, 'src', 'main', 'java');
+                        const srcTestJava = path.join(rootPath, 'src', 'test', 'java');
+                        const mainJavaPath = path.join(srcMainJava, 'Main.java');
+                        const projectName = path.basename(rootPath);
+
+                        const buildGradleContent = `plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'example'
+version = '1.0.0'
+sourceCompatibility = '17'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+application {
+    mainClass = 'Main'
+}
+`;
+
+            const settingsGradleContent = `rootProject.name = '${projectName}'
+`;
+
+            const mainJavaContent = `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, TDD World!");
+    }
+}
+`;
+
+                        if (!fs.existsSync(buildGradlePath)) {
+                            fs.writeFileSync(buildGradlePath, buildGradleContent, 'utf8');
+                        }
+                        if (!fs.existsSync(settingsGradlePath)) {
+                            fs.writeFileSync(settingsGradlePath, settingsGradleContent, 'utf8');
+                        }
+                        if (!fs.existsSync(srcMainJava)) {
+                            fs.mkdirSync(srcMainJava, { recursive: true });
+                        }
+                        if (!fs.existsSync(srcTestJava)) {
+                            fs.mkdirSync(srcTestJava, { recursive: true });
+                        }
+                        if (!fs.existsSync(mainJavaPath)) {
+                            fs.writeFileSync(mainJavaPath, mainJavaContent, 'utf8');
+                        }
+
+                        const { exec } = require('child_process');
+                        exec('git add .gitignore build.gradle settings.gradle src/main/java/Main.java', { cwd: rootPath }, (err: any) => {
+                            if (!err) {
+                                exec('git commit -m "Initial commit: aggiunti .gitignore e file Gradle"', { cwd: rootPath }, (err2: any) => {
+                                    if (!err2) {
+                                        vscode.window.showInformationMessage('Commit iniziale creato con .gitignore e file Gradle.');
+                                    }
+                                });
+                            }
+                        });
+
+                        try {
+                            const terminal = vscode.window.createTerminal('TDD-Mentor-AI Gradle Setup');
+                            terminal.sendText(`cd "${rootPath}"`);
+                            terminal.sendText('gradle wrapper --gradle-version 8.5');
+                            terminal.show();
+                        } catch (error) {
+                            console.log('Gradle wrapper initialization failed, but project structure created');
+                        }
+                    }
+                });
             }
         } else {
             codeAnalysisService = CodeAnalysisService.getInstance(gitService);
