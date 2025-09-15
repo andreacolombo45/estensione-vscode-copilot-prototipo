@@ -324,9 +324,9 @@ ${afterLastBrace}`;
     id 'application'
 }
 
-group = 'com.example'
+group = 'example'
 version = '1.0.0'
-sourceCompatibility = '11'
+sourceCompatibility = '17'
 
 repositories {
     mavenCentral()
@@ -342,7 +342,7 @@ test {
 }
 
 application {
-    mainClass = 'com.example.Main'
+    mainClass = 'Main'
 }
 `;
 
@@ -353,15 +353,13 @@ application {
             this.fsWriteFileSync(buildGradlePath, buildGradleContent);
             this.fsWriteFileSync(settingsGradlePath, settingsGradleContent);
 
-            const srcMainJava = path.join(rootPath, 'src', 'main', 'java', 'com', 'example');
-            const srcTestJava = path.join(rootPath, 'src', 'test', 'java', 'com', 'example');
+            const srcMainJava = path.join(rootPath, 'src', 'main', 'java');
+            const srcTestJava = path.join(rootPath, 'src', 'test', 'java');
 
             await fs.promises.mkdir(srcMainJava, { recursive: true });
             await fs.promises.mkdir(srcTestJava, { recursive: true });
 
-            const mainJavaContent = `package com.example;
-
-public class Main {
+            const mainJavaContent = `public class Main {
     public static void main(String[] args) {
         System.out.println("Hello, TDD World!");
     }
@@ -373,7 +371,7 @@ public class Main {
             try {
                 const terminal = vscode.window.createTerminal('TDD-Mentor-AI Gradle Setup');
                 terminal.sendText(`cd "${rootPath}"`);
-                terminal.sendText('gradle wrapper --gradle-version 7.6');
+                terminal.sendText('gradle wrapper --gradle-version 8.5');
                 terminal.show();
             } catch (error) {
                 console.log('Gradle wrapper initialization failed, but project structure created');

@@ -60,7 +60,10 @@ export const testProposalsConfig: AiGenerationConfig<TestProposal> = {
 
         IMPORTANTE: 
         - Nel campo "targetFile" inserisci SOLO il nome del file (esempio: "CalculatorTest.java"), 
-        - I test devono usare JUnit 5 completo con annotazioni @Test e Mockito per mockare elementi esterni,
+        - Ogni test deve verificare **un solo metodo o funzionalità alla volta**.
+        - Se per testare un metodo sono necessarie altre chiamate (ad esempio player.drawCard()), queste devono essere sempre mockate con Mockito, salvo il metodo target del test.
+        - Usa sempre Mockito per isolare dipendenze esterne e anche eventuali metodi della stessa classe che non siano quello sotto test.
+        - I test devono usare JUnit 5 (con @Test, @ParameterizedTest, @BeforeEach se utile).
         - Usa le convenzioni di naming Java (camelCase per metodi, PascalCase per classi),
         - Includi import appropriati nei commenti se necessario
         

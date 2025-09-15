@@ -1112,10 +1112,16 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
     private async commitRefactoring() {
         try {
             const modifiedFiles = await this._codeAnalysisService.getModifiedFiles();
+            console.log('Modified files:\n', modifiedFiles);
             const filesToCommit = modifiedFiles
                 .split('\n')
                 .filter(line => line.trim() !== '')
-                .map(line => line.substring(3)); 
+                .map(line => line.substring(3)) 
+                .filter(file =>
+                    file.startsWith('src/main/java') ||
+                    file.startsWith('src/test/java')
+                );
+                
             if (filesToCommit.length > 0) {
                 const commitTitle = await vscode.window.showInputBox({
                     prompt: 'Inserisci il titolo del commit',

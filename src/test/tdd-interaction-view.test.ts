@@ -38,7 +38,7 @@ suite('TddInteractionView Test Suite', () => {
             getCommitHistory: sinon.stub().resolves({ commits: [] }),
             insertTestCode: sinon.stub().resolves(true),
             commitChanges: sinon.stub().resolves(),
-            getModifiedFiles: sinon.stub().resolves(' M src/file1.ts\n M src/file2.ts\n'),
+            getModifiedFiles: sinon.stub().resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n'),
             runTests: sinon.stub().resolves({ success: true, output: 'All tests passed' }),
         } as any as CodeAnalysisService;
 
@@ -180,7 +180,7 @@ suite('TddInteractionView Test Suite', () => {
         const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
         
         getModifiedFilesStub.resetHistory();
-        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
+        getModifiedFilesStub.resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -273,7 +273,7 @@ suite('TddInteractionView Test Suite', () => {
         const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
         
         getModifiedFilesStub.resetHistory();
-        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
+        getModifiedFilesStub.resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -337,7 +337,7 @@ suite('TddInteractionView Test Suite', () => {
         const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
         
         getModifiedFilesStub.resetHistory();
-        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
+        getModifiedFilesStub.resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
