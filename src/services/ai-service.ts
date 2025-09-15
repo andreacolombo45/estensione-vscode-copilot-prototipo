@@ -52,13 +52,32 @@ export class AiService {
 
             if (response && Array.isArray(response.items)) {
                 return response.items;
-            } else {
-                throw new Error('Response format is invalid.');
+            } else if (
+                response &&
+                'choices' in response &&
+                Array.isArray((response as any).choices) &&
+                (response as any).choices[0] &&
+                (response as any).choices[0].message &&
+                typeof (response as any).choices[0].message.content === 'string'
+            ) {
+                const content = (response as any).choices[0].message.content;
+                const match = content.match(/```json\s*([\s\S]*?)```/);
+                if (match && match[1]) {
+                    try {
+                        const json = JSON.parse(match[1]);
+                        if (json.items && Array.isArray(json.items)) {
+                            return json.items;
+                        }
+                    } catch (e) {
+                        throw new Error('Failed to parse JSON from AI response.');
+                    }
+                }
             }
         } catch (error) {
             vscode.window.showErrorMessage(`Errore with the generation of ${type}: ${error}`);
             return [];
         }
+        return [];
     }
 
     private async selectThreeItems<T extends AiGeneratedItem>(
