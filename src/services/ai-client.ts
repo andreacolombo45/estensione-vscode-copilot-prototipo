@@ -3,10 +3,13 @@ import { AiRequest, AiRequestOptions, AIResponse } from '../models/tdd-models';
 
 export class AiClient {
     private readonly apiKey: string;
-    private readonly apiUrl: string = 'https://openrouter.ai/api/v1/chat/completions';
+    private readonly apiUrl: string;
+    private readonly model: string;
 
-    constructor(apiKey?: string) {
+    constructor(apiKey?: string, apiUrl?: string, model?: string) {
         this.apiKey = apiKey || vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
+        this.apiUrl = apiUrl || vscode.workspace.getConfiguration('tddMentorAI').get('apiUrl', '');
+        this.model = model || vscode.workspace.getConfiguration('tddMentorAI').get('model', '');
 
         if (!this.apiKey) {
             vscode.window.showErrorMessage('OpenAI API key is not set. Please configure it in settings.');
@@ -56,7 +59,7 @@ export class AiClient {
                     'X-Title': 'TDD-Mentor-AI'
                 },
                 body: JSON.stringify({
-                    model: options.model ?? 'deepseek/deepseek-chat-v3-0324',
+                    model: this.model,
                     messages: messages,
                     max_tokens: options.maxTokens ?? 1000,
                     temperature: options.temperature ?? 0.7

@@ -148,6 +148,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 
                 case 'refreshTestProposals':
                     if (this._stateManager.state.selectedUserStory) {
+                        this._stateManager.setRemainingTestProposals([]);
                         const proposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
                         this._stateManager.setTestProposals(proposals);
                     }
@@ -558,12 +559,14 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
             return this._getTestEditingHtml(state.selectedTest, state.selectedTest.code, state.selectedTest.targetFile || 'test.js');
         }
 
+        const proposalsToShow = state.remainingTestProposals?.length ? state.remainingTestProposals : testProposals;
+
         let proposalsHtml = '';
-        
-        if (testProposals.length === 0) {
+
+        if (proposalsToShow.length === 0) {
             proposalsHtml = '<div>Generazione test in corso...</div>';
         } else {
-            testProposals.forEach(test => {
+            proposalsToShow.forEach(test => {
                 proposalsHtml += `
                 <div class="card" onclick="selectTestProposal('${test.id}')">
                     <div class="card-title">${test.title}</div>
@@ -573,6 +576,15 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 </div>
                 `;
             });
+        }
+
+        let infoMsg = '';
+        if (state.remainingTestProposals?.length) {
+            infoMsg = `
+            <div class="action-hint" style="margin-bottom: 12px;">
+                Seleziona uno dei test generati in precedenza o rigenera se ne gradisci di nuovi.
+            </div>
+            `;
         }
         
         return `
@@ -588,6 +600,7 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
         <h2>User Story selezionata: ${selectedUserStory.title}</h2>
         <p>${selectedUserStory.description}</p>
         
+        ${infoMsg}
         <p>Seleziona uno dei seguenti test proposti:</p>
         
         ${proposalsHtml}
@@ -1093,13 +1106,12 @@ export class TddInteractionView implements vscode.WebviewViewProvider {
                 break;
                 
             case 'red':
-                this._stateManager.resetForNewTests();
                 this._stateManager.setPhase(TddPhase.RED);
-                this._stateManager.setTestProposals([]);
-                if (this._stateManager.state.selectedUserStory) {
-                    const testProposals = await this._aiService.generateTestProposals(this._stateManager.state.selectedUserStory);
-                    this._stateManager.setTestProposals(testProposals);
-                }
+                const previousTests = this._stateManager.state.testProposals;
+                const selectedTest = this._stateManager.state.selectedTest;
+                const remainingTests = previousTests.filter(t => t.id !== selectedTest?.id);
+                this._stateManager.resetForNewTests();
+                this._stateManager.setRemainingTestProposals(remainingTests);
                 break;
                 
             case 'refactoring':
