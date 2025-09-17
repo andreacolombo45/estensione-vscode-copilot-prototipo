@@ -289,6 +289,8 @@ diff --git a/Main.java b/Main.java
             testProposals: [],
             userStories: [],
             refactoringSuggestions: [],
+            greenQuestionCount: 0,
+            greenChatHistory: []
         };
         const getModifiedFilesStub = gitServiceStub.getModifiedFiles as sinon.SinonStub;
         getModifiedFilesStub.resolves('');
@@ -314,7 +316,9 @@ diff --git a/Main.java b/Main.java
                 description: 'This test implements feature X',
                 code: '@Test\npublic void testAdd() { assertEquals(5, calculator.add(2, 3)); }',
                 targetFile: 'CalculatorTest.java'
-            }
+            },
+            greenQuestionCount: 0,
+            greenChatHistory: []
         };
 
         const modifiedFiles = ' M src/main/java/Calculator.java\n M src/test/java/CalculatorTest.java\n';
@@ -340,6 +344,8 @@ diff --git a/Main.java b/Main.java
             testProposals: [],
             userStories: [],
             refactoringSuggestions: [],
+            greenQuestionCount: 0,
+            greenChatHistory: []
         };
 
         const modifiedFiles = ' M src/main/java/Calculator.java\n M src/test/java/CalculatorTest.java\n';

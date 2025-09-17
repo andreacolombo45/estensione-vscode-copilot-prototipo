@@ -7,6 +7,7 @@ import { TddStateManager } from '../services/tdd-state-manager';
 import { TddPhase } from '../models/tdd-models';
 import { CodeAnalysisService } from '../services/code-analysis-service';
 import { GitService } from '../services/git-service';
+import { stat } from 'fs';
 
 suite('TddInteractionView Test Suite', () => {
     let tddInteractionView: TddInteractionView;
@@ -37,7 +38,7 @@ suite('TddInteractionView Test Suite', () => {
             getCommitHistory: sinon.stub().resolves({ commits: [] }),
             insertTestCode: sinon.stub().resolves(true),
             commitChanges: sinon.stub().resolves(),
-            getModifiedFiles: sinon.stub().resolves(' M src/file1.ts\n M src/file2.ts\n'),
+            getModifiedFiles: sinon.stub().resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n'),
             runTests: sinon.stub().resolves({ success: true, output: 'All tests passed' }),
         } as any as CodeAnalysisService;
 
@@ -179,7 +180,7 @@ suite('TddInteractionView Test Suite', () => {
         const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
         
         getModifiedFilesStub.resetHistory();
-        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
+        getModifiedFilesStub.resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -272,7 +273,7 @@ suite('TddInteractionView Test Suite', () => {
         const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
         
         getModifiedFilesStub.resetHistory();
-        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
+        getModifiedFilesStub.resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -336,7 +337,7 @@ suite('TddInteractionView Test Suite', () => {
         const setRefactoringFeedbackSpy = sinon.spy(stateManager, 'setRefactoringFeedback');
         
         getModifiedFilesStub.resetHistory();
-        getModifiedFilesStub.resolves(' M src/file1.ts\n M src/file2.ts\n');
+        getModifiedFilesStub.resolves(' M src/main/java/file1.java\n M src/main/java/file2.java\n');
 
         const context = {} as vscode.WebviewViewResolveContext;
         const token = {} as vscode.CancellationToken;
@@ -542,5 +543,37 @@ suite('TddInteractionView Test Suite', () => {
         assert.ok(setPhaseSpy.calledWith(TddPhase.PICK));
         assert.ok(generateUserStoriesStub.calledOnce);
         assert.ok(setUserStoriesSpy.calledWith([]));
+    });
+
+    test('Should handle clearChatHistory message', async () => {
+        const clearChatHistorySpy = sinon.spy(stateManager, 'clearChatHistory');
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'clearChatHistory' });
+
+        assert.ok(clearChatHistorySpy.calledOnce);
+    });
+
+    test('Should handle askAiGreenPhase message', async () => {
+        stateManager.setPhase(TddPhase.GREEN);
+        const increaseQuestionCountStub = sinon.stub(stateManager, 'increaseQuestionCount').resolves(2);
+        const askGreenQuestionStub = sinon.stub(aiService, 'askGreenQuestion').resolves('AI response to green question');
+        const addToChatHistorySpy = sinon.spy(stateManager, 'addToChatHistory');
+
+        const context = {} as vscode.WebviewViewResolveContext;
+        const token = {} as vscode.CancellationToken;
+
+        tddInteractionView.resolveWebviewView(mockWebviewView, context, token);
+
+        const messageHandler = (mockWebview.onDidReceiveMessage as sinon.SinonStub).getCall(0).args[0];
+        await messageHandler({ command: 'askAiGreenPhase', question: 'Domanda di test' });
+
+        assert.ok(increaseQuestionCountStub.calledOnce);
+        assert.ok(askGreenQuestionStub.calledOnce);
+        assert.ok(addToChatHistorySpy.calledOnce);
     });
 });

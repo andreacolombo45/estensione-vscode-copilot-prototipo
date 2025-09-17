@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { TddPhase, AiMode, TddState, UserStory, TestProposal, RefactoringSuggestion, RefactoringFeedback } from '../models/tdd-models';
-import { version } from 'os';
 
 
 export class TddStateManager {
@@ -20,7 +19,12 @@ export class TddStateManager {
             currentMode: AiMode.ASK,
             testProposals: [],
             userStories: [],
-            refactoringSuggestions: []
+            refactoringSuggestions: [],
+            greenQuestionCount: 0,
+            greenChatHistory: [],
+            refactoringFeedback: undefined,
+            selectedUserStory: undefined,
+            selectedTest: undefined,
         };
         this._extensionContext = context;
     }
@@ -177,6 +181,24 @@ export class TddStateManager {
         this.saveState();
     }
 
+    public increaseQuestionCount(): void {
+        this._state.greenQuestionCount++;
+        this._notifyStateChanged();
+        this.saveState();
+    }
+
+    public addToChatHistory(userMessage: string, aiMessage: string): void {
+        this._state.greenChatHistory.push({ user: userMessage, ai: aiMessage });
+        this._notifyStateChanged();
+        this.saveState();
+    }
+
+    public clearChatHistory(): void {
+        this._state.greenChatHistory = [];
+        this._notifyStateChanged();
+        this.saveState();
+    }
+
     public reset(): void {
         this._state = {
             currentPhase: TddPhase.PICK,
@@ -190,7 +212,9 @@ export class TddStateManager {
             modifiedSelectedTest: undefined,
             testResults: undefined,
             isEditingTest: false,
-            nextPhase: undefined
+            nextPhase: undefined,
+            greenQuestionCount: 0,
+            greenChatHistory: []
         };
         this._notifyStateChanged();
         this.saveState();
@@ -209,7 +233,9 @@ export class TddStateManager {
             refactoringSuggestions: [],
             refactoringFeedback: undefined,
             selectedUserStory: this._state.selectedUserStory,
-            nextPhase: undefined
+            nextPhase: undefined,
+            greenQuestionCount: 0,
+            greenChatHistory: []
         };
         this._notifyStateChanged();
         this.saveState();
