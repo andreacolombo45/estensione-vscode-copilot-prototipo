@@ -449,6 +449,17 @@ application {
         })
     );
 
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getRemainingTestProposals', () => {
+            const remainingTests = stateManager.state.remainingTestProposals;
+            if (remainingTests) {
+                vscode.window.showInformationMessage(`Test rimanenti: ${JSON.stringify(remainingTests, null, 2)}`);
+            } else {
+                vscode.window.showInformationMessage('Nessun test rimanente.');
+            }
+        })
+    );
+
 }
 
 export function deactivate() {}

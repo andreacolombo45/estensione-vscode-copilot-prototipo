@@ -91,6 +91,11 @@
         "command": "tdd-mentor-ai.clearChat",
         "title": "TDD Mentor: Resetta Chat Interazione",
         "icon": "$(trash)"
+      },
+      {
+        "command": "tdd-mentor-ai.getRemainingTestProposals",
+        "title": "TDD Mentor: Mostra Test Rimanenti",
+        "icon": "$(loop)"
       }
     ],
     "viewsContainers": {
