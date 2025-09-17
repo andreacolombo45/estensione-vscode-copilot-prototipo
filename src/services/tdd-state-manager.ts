@@ -199,6 +199,15 @@ export class TddStateManager {
         this.saveState();
     }
 
+    public setRemainingTestProposals(tests: TestProposal[]): void {
+        this._state = {
+            ...this._state,
+            remainingTestProposals: tests
+        };
+        this._notifyStateChanged();
+        this.saveState();
+    }
+
     public reset(): void {
         this._state = {
             currentPhase: TddPhase.PICK,

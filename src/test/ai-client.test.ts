@@ -8,7 +8,7 @@ suite('AiClient Test Suite', () => {
     let fetchStub: sinon.SinonStub;
 
     setup(() => {
-        aiClient = new AiClient("test-api-key");
+        aiClient = new AiClient("test-api-key", "https://openrouter.ai/api/v1/chat/completions", "deepseek/deepseek-chat-v3-0324:free");
         fetchStub = sinon.stub(global, "fetch");
     });
 

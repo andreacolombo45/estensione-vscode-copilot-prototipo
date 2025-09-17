@@ -44,6 +44,20 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     }
 
+    const model = vscode.workspace.getConfiguration('tddMentorAI').get('model', '');
+    const apiUrl = vscode.workspace.getConfiguration('tddMentorAI').get('apiUrl', '');
+    if (!apiUrl || !model) {
+        const configAction = 'Configura Impostazioni AI';
+        const response = await vscode.window.showWarningMessage(
+            'Per utilizzare TDD-Mentor-AI è necessario configurare le impostazioni AI (modello e URL API).',
+            configAction
+        );
+
+        if (response === configAction) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'tddMentorAI');
+        }
+    }
+
     let gitService: GitService | null = null;
     let codeAnalysisService: CodeAnalysisService | null = null;
     let aiService: AiService;
@@ -210,7 +224,7 @@ application {
         } else {
             codeAnalysisService = CodeAnalysisService.getInstance(gitService);
             
-            const aiClient = new AiClient(apikey);
+            const aiClient = new AiClient(apikey, apiUrl, model);
             aiService = await AiService.getInstance(codeAnalysisService, aiClient);
 
             tddCycleViewProvider = new TddCycleView(context.extensionUri);
@@ -432,6 +446,17 @@ application {
         vscode.commands.registerCommand('tdd-mentor-ai.clearChat', () => {
             stateManager.clearChatHistory();
             vscode.window.showInformationMessage('Chat resettata.');
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tdd-mentor-ai.getRemainingTestProposals', () => {
+            const remainingTests = stateManager.state.remainingTestProposals;
+            if (remainingTests) {
+                vscode.window.showInformationMessage(`Test rimanenti: ${JSON.stringify(remainingTests, null, 2)}`);
+            } else {
+                vscode.window.showInformationMessage('Nessun test rimanente.');
+            }
         })
     );
 

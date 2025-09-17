@@ -359,17 +359,13 @@ suite('TddInteractionView Test Suite', () => {
     test("Should handle commitAndGoToTest message with no changes", async () => {
         const getModifiedFilesStub = codeAnalysisService.getModifiedFiles as sinon.SinonStub;
         const generateRefactoringFeedbackStub = sinon.stub(aiService, 'generateRefactoringFeedback');
-        const generateTestProposalsStub = sinon.stub(aiService, 'generateTestProposals').resolves([
-            { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' },
-            { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
-        ]);
 
         stateManager.setUserStories([{ id: 'us1', title: 'User Story 1', description: 'Description 1' }]);
         stateManager.selectUserStory('us1');
 
         const resetForNewTestsSpy = sinon.spy(stateManager, 'resetForNewTests');
         const setPhaseSpy = sinon.spy(stateManager, 'setPhase');
-        const setTestProposalsSpy = sinon.spy(stateManager, 'setTestProposals');
+        const setRemainingTestProposalsSpy = sinon.spy(stateManager, 'setRemainingTestProposals');
 
         getModifiedFilesStub.resetHistory();
         getModifiedFilesStub.resolves('');
@@ -384,14 +380,9 @@ suite('TddInteractionView Test Suite', () => {
 
         assert.ok(getModifiedFilesStub.calledOnce, 'getModifiedFiles should be called');
         assert.ok(generateRefactoringFeedbackStub.notCalled, 'generateRefactoringFeedback should not be called when there are no changes');
-        assert.ok(generateTestProposalsStub.calledOnce, 'generateTestProposals should be called to refresh tests');
         assert.ok(resetForNewTestsSpy.calledOnce, 'resetForNewTests should be called to reset state for new tests');
         assert.ok(setPhaseSpy.calledWith(TddPhase.RED), 'setPhase should be called with red');
-        assert.ok(setTestProposalsSpy.calledWith([]));
-        assert.ok(setTestProposalsSpy.calledWith([
-            { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' },
-            { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
-        ]));
+        assert.ok(setRemainingTestProposalsSpy.called, 'setRemainingTestProposals should be called to update remaining test proposals');
     });
 
     test("Should handle proceedAfterFeedback message", async () => {
@@ -450,6 +441,7 @@ suite('TddInteractionView Test Suite', () => {
         ]);
 
         const setTestProposalsSpy = sinon.spy(stateManager, 'setTestProposals');
+        const setRemainingTestProposalsSpy = sinon.spy(stateManager, 'setRemainingTestProposals');
 
         stateManager.setUserStories([{ id: 'us1', title: 'User Story 1', description: 'Description 1' }]);
         stateManager.selectUserStory('us1');
@@ -467,6 +459,7 @@ suite('TddInteractionView Test Suite', () => {
             { id: 'test1', title: 'Test 1', description: 'First test', code: 'test code 1', targetFile: 'test.js' },
             { id: 'test2', title: 'Test 2', description: 'Second test', code: 'test code 2', targetFile: 'test.js' }
         ]));
+        assert.ok(setRemainingTestProposalsSpy.calledWith([]));
     });
 
     test("Should handle refreshRefactoringSuggestions message", async () => {

@@ -54,6 +54,7 @@ export interface TddState {
     nextPhase?: 'pick' | 'red' | 'refactoring';
     greenQuestionCount: number;
     greenChatHistory: { user: string, ai: string }[];
+    remainingTestProposals?: TestProposal[];
 }
 
 export interface AiRequestOptions {
