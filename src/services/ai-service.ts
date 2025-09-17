@@ -138,12 +138,12 @@ export class AiService {
                 }
             }
 
-            const sourceFilesContent = projectStructure.sourceFiles.slice(0, 5).map(f => ({
+            const sourceFilesContent = projectStructure.sourceFiles.map(f => ({
                 file: f,
                 content: safeRead(f)
             }));
 
-            const testFilesContent = projectStructure.testFiles.slice(0, 5).map(f => ({
+            const testFilesContent = projectStructure.testFiles.map(f => ({
                 file: f,
                 content: safeRead(f)
             }));
