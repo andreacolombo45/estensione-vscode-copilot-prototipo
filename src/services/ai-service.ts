@@ -22,7 +22,9 @@ export class AiService {
         if (!AiService.instance) {
             if (!aiClient) {
                 const apikey = vscode.workspace.getConfiguration('tddMentorAI').get('openaiApiKey', '');
-                aiClient = new AiClient(apikey);
+                const apiUrl = vscode.workspace.getConfiguration('tddMentorAI').get('apiUrl', '');
+                const model = vscode.workspace.getConfiguration('tddMentorAI').get('model', '');
+                aiClient = new AiClient(apikey, apiUrl, model);
             }
             AiService.instance = new AiService(aiClient, codeAnalysisService, aiConfigs);
         }
